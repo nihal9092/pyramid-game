@@ -201,7 +201,8 @@
                 loadHierarchy();
             }
         };
-
+<input id="chat-input" onkeypress="if(event.key==='Enter') sendMessage()" ... >
+<button onclick="sendMessage()" ... >SEND</button>
         async function loadHierarchy() {
             const list = document.getElementById('pyramid-list');
             list.innerHTML = "";
