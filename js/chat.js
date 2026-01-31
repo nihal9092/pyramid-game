@@ -174,7 +174,7 @@ async function executeGift(sender, target, giftName, price) {
         });
 
         // Play sound immediately for the sender
-        handleGiftEffects(price); 
+        handleGiftEffects(giftName, price); 
 
     } catch (e) {
         alert("Transaction Failed: " + e);
@@ -183,3 +183,6 @@ async function executeGift(sender, target, giftName, price) {
 
 // ... (Keep sendMessage, openGiftMenu, and executeGift EXACTLY as they were before) ...
 // Copy the executeGift I fixed for you in the previous step here!
+
+// Expose openGiftMenu to the global scope so inline onclick handlers work
+if (typeof openGiftMenu === 'function') window.openGiftMenu = openGiftMenu;
