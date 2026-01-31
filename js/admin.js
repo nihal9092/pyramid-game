@@ -69,6 +69,22 @@ async function quickEdit(name) {
     loadAdminUserData();
     loadHierarchy(); // Refresh main UI
 }
+async function sendBroadcast() {
+    const msg = document.getElementById('broadcast-msg').value;
+    if(!msg) return;
+    
+    await db.collection("messages").add({
+        user: "SYSTEM",
+        text: msg.toUpperCase(),
+        type: "TEXT",
+        time: Date.now(),
+        isGlobal: true
+    });
+    // Add a specific notification sound for broadcasts
+    const broadcastSound = new Audio('https://assets.mixkit.co/active_storage/sfx/951/951-preview.mp3');
+    broadcastSound.play();
+    alert("Broadcast dispatched.");
+}
 
 async function banUser(name) {
     const reason = prompt("Reason for Ban/Suspension:");
