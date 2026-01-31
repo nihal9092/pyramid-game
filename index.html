@@ -8,6 +8,17 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
     <style>
+        /* Add this inside your <style> tag */
+
+@keyframes slideDown {
+    from { transform: translateY(-100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.animate-slideDown {
+    animation: slideDown 0.5s ease-out forwards;
+    transition: all 0.5s ease-out;
+}
         @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Inter:wght@300;400;600&display=swap');
         
         :root { --gold: #d4af37; --dark: #0a0a0a; }
