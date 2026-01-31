@@ -197,7 +197,7 @@
             return;
         }
 
-        if (prompt('SOVEREIGN OVERRIDE REQUIRED:') !== 'OWNER NG') {
+        if (prompt('SOVEREIGN OVERRIDE REQUIRED:') !== 'NG') {
             return alert('Unauthorized Access Detected.');
         }
 
