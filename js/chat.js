@@ -139,7 +139,7 @@ function renderMessage(m, container) {
     }
     container.appendChild(div);
 }
-function executeGift(sender, target, giftName, price) {
+async function executeGift(sender, target, giftName, price) {
     const senderRef = db.collection("users").doc(sender);
     const targetRef = db.collection("users").doc(target);
 
