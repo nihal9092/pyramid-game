@@ -18,7 +18,19 @@
         </select>
         <button onclick="handleRegister()" class="bg-[#d4af37] text-black p-3 w-full font-bold">JOIN</button>
     </div>
+<div id="app-screen" class="hidden max-w-md mx-auto">
+    <div class="flex justify-between items-center border-b border-[#d4af37] pb-4 mb-6">
+        <h2 id="display-name" class="text-[#d4af37] font-bold uppercase">Player</h2>
+        <div class="text-right">
+            <p class="text-[10px] text-gray-500">CREDITS</p>
+            <p id="display-credits" class="text-white font-mono">0</p>
+        </div>
+    </div>
 
+    <h3 class="text-center text-xs tracking-[0.5em] text-gray-500 mb-4 uppercase">The Hierarchy</h3>
+    <div id="pyramid-container" class="space-y-4">
+        </div>
+</div>
     <script>
         // 1. YOUR FIREBASE KEYS (Get these from Firebase Console)
         const firebaseConfig = {
@@ -29,7 +41,102 @@
             messagingSenderId: "302574478188",
             appId: "1:302574478188:web:aded8d66bdd1f828da8949"
         };
+const firebaseConfig = {AIzaSyBs81OlYrQ1_HBUHJ3Tim1vT-2glHOZPbc};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 
+// 1. SET YOUR SECRET ADMIN NAME HERE
+const ADMIN_NAME = "Nihal"; // Change this to your exact whitelisted name
+
+// 2. LOAD APP LOGIC
+window.onload = () => {
+    const savedName = localStorage.getItem('pyramidName');
+    if (savedName) {
+        document.getElementById('reg-box').classList.add('hidden');
+        document.getElementById('app-screen').classList.remove('hidden');
+        document.getElementById('display-name').innerText = savedName;
+        loadPyramid();
+    }
+};
+
+// 3. THE PYRAMID LOADER
+async function loadPyramid() {
+    const container = document.getElementById('pyramid-container');
+    container.innerHTML = "<p class='text-center text-xs'>Loading Hierarchy...</p>";
+
+    // Fetch users sorted by votes
+    const snapshot = await db.collection("users").orderBy("totalVotesReceived", "desc").get();
+    const myName = localStorage.getItem('pyramidName');
+    
+    container.innerHTML = "";
+    let rank = 1;
+
+    snapshot.forEach(doc => {
+        const user = doc.data();
+        const isMe = user.name === myName;
+        const isTop = rank === 1;
+
+        const card = document.createElement('div');
+        // If rank #1, give them the 'Popularity King/Queen' glow
+        card.className = `p-4 mb-2 flex justify-between items-center transition-all ${isTop ? 'border-2 border-[#d4af37] bg-[#1a1300] shadow-[0_0_15px_rgba(212,175,55,0.4)]' : 'border border-zinc-800 bg-zinc-900'}`;
+        
+        // Add double-click trigger only if it's YOUR card
+        if (isMe && user.name === ADMIN_NAME) {
+            card.ondblclick = () => openAdminPanel(user.name);
+        }
+
+        card.innerHTML = `
+            <div>
+                <span class="text-[10px] ${isTop ? 'text-[#d4af37]' : 'text-zinc-500'} font-bold">#${rank}</span>
+                <span class="ml-2 font-bold ${isMe ? 'text-[#d4af37]' : 'text-white'}">${user.name}</span>
+                <p class="text-[10px] tracking-widest text-zinc-400 uppercase">${isTop ? '👑 Popularity King/Queen' : (user.title || 'Commoner')}</p>
+            </div>
+            <div class="text-right">
+                <button onclick="castVote('${user.name}')" class="text-[10px] border border-[#d4af37] px-3 py-1 text-[#d4af37] hover:bg-[#d4af37] hover:text-black">VOTE</button>
+            </div>
+        `;
+        container.appendChild(card);
+        rank++;
+    });
+}
+
+// 4. SECRET ADMIN FUNCTION
+async function openAdminPanel(targetName) {
+    const masterKey = prompt("SYSTEM OVERRIDE: Enter Master Password");
+    if (masterKey === "OWNER NG") { // SET YOUR ADMIN PASSWORD HERE
+        const action = prompt("1: Edit Title | 2: Add Credits | 3: Change OTHER user title");
+        
+        if (action === "1" || action === "3") {
+            const nameToEdit = (action === "3") ? prompt("Enter Classmate's Full Name:") : targetName;
+            const newTitle = prompt(`Enter new title for ${nameToEdit} (e.g. Topper, Backbencher, Athlete):`);
+            
+            await db.collection("users").doc(nameToEdit).update({ title: newTitle });
+            alert("Hierarchy Updated.");
+        } else if (action === "2") {
+            const amount = parseInt(prompt("Amount of Credits to add:"));
+            await db.collection("users").doc(targetName).update({ 
+                credits: firebase.firestore.FieldValue.increment(amount) 
+            });
+        }
+        loadPyramid(); // Refresh UI
+    }
+}
+
+// 5. VOTING LOGIC
+async function castVote(target) {
+    const myName = localStorage.getItem('pyramidName');
+    if (target === myName) return alert("You cannot vote for yourself.");
+
+    try {
+        await db.collection("users").doc(target).update({
+            totalVotesReceived: firebase.firestore.FieldValue.increment(1)
+        });
+        alert("Vote recorded for " + target);
+        loadPyramid();
+    } catch (e) {
+        alert("Error voting: " + e.message);
+    }
+}
         // Initialize Firebase
         try {
             firebase.initializeApp(firebaseConfig);
