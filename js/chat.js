@@ -139,6 +139,47 @@ function renderMessage(m, container) {
     }
     container.appendChild(div);
 }
+async function executeGift(sender, target, giftName, price) {
+    const senderRef = db.collection("users").doc(sender);
+    const targetRef = db.collection("users").doc(target);
+
+    try {
+        await db.runTransaction(async (t) => {
+            // 1. PERFORM ALL READS FIRST (Fixing the error)
+            const sDoc = await t.get(senderRef);
+            const tDoc = await t.get(targetRef);
+
+            if (!sDoc.exists) throw "Sender data missing.";
+            if (!tDoc.exists) throw "Target user does not exist.";
+            
+            const senderData = sDoc.data();
+            const targetData = tDoc.data();
+
+            if (senderData.credits < price) {
+                throw "Insufficient credits for this flex.";
+            }
+
+            // 2. PERFORM WRITES AFTER
+            t.update(senderRef, { credits: senderData.credits - price });
+            t.update(targetRef, { credits: (targetData.credits || 0) + price });
+        });
+
+        // 3. LOG THE MESSAGE (Only if transaction succeeds)
+        await db.collection("messages").add({
+            user: sender,
+            target: target,
+            giftName: giftName,
+            type: "GIFT",
+            time: Date.now()
+        });
+
+        // Play sound immediately for the sender
+        handleGiftEffects(price); 
+
+    } catch (e) {
+        alert("Transaction Failed: " + e);
+    }
+}
 
 // ... (Keep sendMessage, openGiftMenu, and executeGift EXACTLY as they were before) ...
 // Copy the executeGift I fixed for you in the previous step here!
