@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>THE PYRAMID</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Inter:wght@300;400;600&display=swap');
+        
+        :root {
+            --gold: #d4af37;
+            --dark: #0a0a0a;
+        }
+
+        body {
+            background-color: var(--dark);
+            color: #e5e5e5;
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+        }
+
+        .cinzel { font-family: 'Cinzel', serif; }
+
+        /* Animated Background Particles */
+        .bg-animate {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at center, #1a1a1a 0%, #000 100%);
+            z-index: -1;
+        }
+
+        .gold-glow { box-shadow: 0 0 20px rgba(212, 175, 55, 0.2); border: 1px solid var(--gold); }
+        
+        /* Smooth Fade In */
+        .fade-in { animation: fadeIn 0.8s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Pyramid Tier Hover */
+        .user-card:hover { background: rgba(212, 175, 55, 0.05); transform: scale(1.02); transition: all 0.3s ease; }
+    </style>
+</head>
+<body>
+    <div class="bg-animate"></div>
+
+    <div id="auth-screen" class="min-h-screen flex items-center justify-center p-6 fade-in">
+        <div class="w-full max-w-md">
+            <h1 class="cinzel text-5xl text-center text-[#d4af37] tracking-[0.2em] mb-2">PYRAMID</h1>
+            <p class="text-center text-[10px] tracking-[0.4em] text-zinc-500 mb-10 uppercase">Social Hierarchy Protocol</p>
+            
+            <div class="bg-black/80 backdrop-blur-md p-8 gold-glow rounded-sm">
+                <div id="auth-title" class="text-xl cinzel mb-6 text-center text-white">Identity Registration</div>
+                
+                <p id="reg-warning" class="text-red-500 text-[10px] font-bold mb-6 text-center uppercase leading-relaxed">
+                    Please use real names only. Registration is restricted to verified classmates. Identity mismatch results in expulsion.
+                </p>
+
+                <div class="space-y-4">
+                    <input id="auth-name" type="text" placeholder="FULL REAL NAME" class="w-full bg-zinc-900/50 border border-zinc-800 p-4 text-sm focus:border-[#d4af37] outline-none transition-all">
+                    
+                    <select id="auth-gender" class="w-full bg-zinc-900/50 border border-zinc-800 p-4 text-sm text-zinc-400 outline-none">
+                        <option value="">SELECT GENDER</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                    </select>
+
+                    <button id="main-auth-btn" onclick="handleAuth()" class="w-full bg-[#d4af37] text-black cinzel font-bold py-4 tracking-widest hover:bg-yellow-600 transition-all">
+                        ESTABLISH RANK
+                    </button>
+
+                    <div class="text-center mt-6">
+                        <button onclick="toggleAuthMode()" id="toggle-btn" class="text-[10px] text-zinc-500 hover:text-[#d4af37] tracking-widest uppercase">
+                            Already Registered? Access Portal
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="app-screen" class="hidden max-w-2xl mx-auto px-6 py-10 fade-in">
+        <header class="flex justify-between items-end mb-12 border-b border-zinc-800 pb-6">
+            <div>
+                <p class="text-[10px] text-zinc-500 tracking-widest uppercase mb-1">Current Subject</p>
+                <h2 id="my-name-display" class="cinzel text-2xl text-white">---</h2>
+                <p id="my-title-display" class="text-[10px] text-[#d4af37] font-bold tracking-widest uppercase">Commoner</p>
+            </div>
+            <div class="text-right">
+                <p class="text-[10px] text-zinc-500 tracking-widest uppercase mb-1">Credits</p>
+                <h2 id="my-credits-display" class="text-xl font-mono text-white">100,000</h2>
+            </div>
+        </header>
+
+        <div id="pyramid-list" class="space-y-4">
+            </div>
+
+        <button onclick="logout()" class="mt-10 text-[10px] text-zinc-600 uppercase tracking-widest hover:text-red-500">Terminate Session</button>
+    </div>
+
+    <script>
+        // FIREBASE INITIALIZATION
+        const firebaseConfig = {
+            apiKey: "AIzaSyBs81OlYrQ1_HBUHJ3Tim1vT-2glHOZPbc",
+            authDomain: "pyramidgame2026.firebaseapp.com",
+            projectId: "pyramidgame2026",
+            storageBucket: "pyramidgame2026.firebasestorage.app",
+            messagingSenderId: "302574478188",
+            appId: "1:302574478188:web:aded8d66bdd1f828da8949"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // APP CONSTANTS
+        const ADMIN_NAME = "Nihal";
+        const ADMIN_PASS = "OWNER NG";
+        let isLoginMode = false;
+
+        function toggleAuthMode() {
+            isLoginMode = !isLoginMode;
+            document.getElementById('auth-title').innerText = isLoginMode ? "Secure Access" : "Identity Registration";
+            document.getElementById('main-auth-btn').innerText = isLoginMode ? "VERIFY IDENTITY" : "ESTABLISH RANK";
+            document.getElementById('toggle-btn').innerText = isLoginMode ? "New User? Register" : "Already Registered? Access Portal";
+            document.getElementById('auth-gender').style.display = isLoginMode ? 'none' : 'block';
+            document.getElementById('reg-warning').style.display = isLoginMode ? 'none' : 'block';
+        }
+
+        async function handleAuth() {
+            const name = document.getElementById('auth-name').value.trim();
+            const gender = document.getElementById('auth-gender').value;
+
+            if (!name) return alert("Identify yourself.");
+
+            const userRef = db.collection("users").doc(name);
+            const doc = await userRef.get();
+
+            if (isLoginMode) {
+                if (doc.exists) {
+                    enterApp(name);
+                } else {
+                    alert("Identity not found in the protocol.");
+                }
+            } else {
+                if (doc.exists) return alert("This soul is already registered.");
+                if (!gender) return alert("Select gender to finalize profile.");
+
+                await userRef.set({
+                    name: name,
+                    gender: gender,
+                    credits: 100000,
+                    title: "Commoner",
+                    totalVotesReceived: 0,
+                    votesRemaining: 3
+                });
+                enterApp(name);
+            }
+        }
+
+        function enterApp(name) {
+            localStorage.setItem('pyramidUser', name);
+            location.reload();
+        }
+
+        function logout() {
+            localStorage.removeItem('pyramidUser');
+            location.reload();
+        }
+
+        // LOAD DASHBOARD
+        window.onload = async () => {
+            const user = localStorage.getItem('pyramidUser');
+            if (user) {
+                document.getElementById('auth-screen').classList.add('hidden');
+                document.getElementById('app-screen').classList.remove('hidden');
+                document.getElementById('my-name-display').innerText = user;
+                
+                const myData = await db.collection("users").doc(user).get();
+                document.getElementById('my-credits-display').innerText = myData.data().credits.toLocaleString();
+                document.getElementById('my-title-display').innerText = myData.data().title;
+                
+                loadHierarchy();
+            }
+        };
+
+        async function loadHierarchy() {
+            const list = document.getElementById('pyramid-list');
+            list.innerHTML = "";
+            const snapshot = await db.collection("users").orderBy("totalVotesReceived", "desc").get();
+            let rank = 1;
+
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                const isMe = data.name === localStorage.getItem('pyramidUser');
+                const isTop = rank === 1;
+
+                const card = document.createElement('div');
+                card.className = `user-card p-5 border ${isTop ? 'border-[#d4af37] bg-[#d4af37]/5' : 'border-zinc-900 bg-zinc-900/30'} flex justify-between items-center`;
+                
+                // ADMIN TRICK: Double tap your own name if you are Nihal
+                if (isMe && data.name === ADMIN_NAME) {
+                    card.ondblclick = () => openAdminPower();
+                }
+
+                card.innerHTML = `
+                    <div class="flex items-center gap-4">
+                        <span class="cinzel text-xl ${isTop ? 'text-[#d4af37]' : 'text-zinc-700'}">#${rank}</span>
+                        <div>
+                            <p class="font-bold ${isMe ? 'text-[#d4af37]' : 'text-white'}">${data.name}</p>
+                            <p class="text-[9px] tracking-widest uppercase text-zinc-500">${isTop ? '👑 Popularity King' : data.title}</p>
+                        </div>
+                    </div>
+                    <button onclick="voteFor('${data.name}')" class="text-[9px] tracking-widest border border-zinc-700 px-4 py-2 hover:border-[#d4af37] hover:text-[#d4af37] transition-all">VOTE</button>
+                `;
+                list.appendChild(card);
+                rank++;
+            });
+        }
+
+        async function openAdminPower() {
+            const pass = prompt("SOVEREIGN OVERRIDE REQUIRED:");
+            if (pass === ADMIN_PASS) {
+                const target = prompt("Target Classmate's Name:");
+                const newTitle = prompt("Assign New Royal Title:");
+                await db.collection("users").doc(target).update({ title: newTitle });
+                alert("The Hierarchy has been reshaped.");
+                loadHierarchy();
+            }
+        }
+
+        async function voteFor(name) {
+            const me = localStorage.getItem('pyramidUser');
+            if (me === name) return alert("Self-voting is prohibited.");
+            
+            await db.collection("users").doc(name).update({
+                totalVotesReceived: firebase.firestore.FieldValue.increment(1)
+            });
+            alert("Vote recorded for " + name);
+            loadHierarchy();
+        }
+    </script>
+</body>
+</html>
