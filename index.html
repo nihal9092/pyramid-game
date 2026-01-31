@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Pyramid</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
+    <style>
+        body { background: #050505; color: #d1d1d1; font-family: 'Times New Roman', serif; }
+        .gold-glow { box-shadow: 0 0 15px rgba(212, 175, 55, 0.3); border: 1px solid #d4af37; }
+        .gift-notif { animation: slideIn 3s ease-in-out; }
+        @keyframes slideIn { 0% { transform: translateX(100%); } 10%, 90% { transform: translateX(0); } 100% { transform: translateX(100%); } }
+    </style>
+</head>
+<body class="min-h-screen pb-20">
+
+    <div id="reg-page" class="fixed inset-0 bg-black z-50 flex items-center justify-center p-6">
+        <div class="w-full max-w-sm">
+            <h1 class="text-4xl text-center text-[#d4af37] tracking-[0.3em] mb-10">THE PYRAMID</h1>
+            <div class="bg-[#111] p-6 gold-glow rounded-none">
+                <p class="text-red-600 text-[10px] font-bold mb-4 text-center uppercase leading-tight">
+                    Please use real names only if your name is not matching with the classmate list you will not be able to register and also select the gender
+                </p>
+                <input id="reg-name" type="text" placeholder="Full Real Name" class="w-full bg-black border border-zinc-800 p-3 mb-4 focus:border-[#d4af37] outline-none">
+                <select id="reg-gender" class="w-full bg-black border border-zinc-800 p-3 mb-6">
+                    <option value="">Select Gender</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                </select>
+                <button onclick="handleRegister()" class="w-full bg-[#d4af37] text-black font-bold py-3 tracking-widest uppercase text-sm">Join the Hierarchy</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="app-page" class="hidden px-4 pt-8">
+        <header class="flex justify-between items-center mb-8">
+            <div>
+                <p class="text-[10px] text-zinc-500 uppercase tracking-widest">Your Status</p>
+                <h2 id="my-title" class="text-[#d4af37] font-bold">Checking...</h2>
+            </div>
+            <div class="text-right">
+                <p class="text-[10px] text-zinc-500 uppercase tracking-widest">Credits</p>
+                <h2 id="my-credits" class="text-white font-mono">100,000</h2>
+            </div>
+        </header>
+
+        <div class="mb-10 text-center">
+            <div class="inline-block p-6 gold-glow bg-[#111] relative overflow-hidden">
+                <p class="text-[10px] tracking-widest text-[#d4af37] mb-2">CURRENT SOVEREIGN</p>
+                <h1 id="king-queen" class="text-2xl font-bold text-white uppercase">Waiting for Votes...</h1>
+            </div>
+        </div>
+
+        <div id="user-list" class="space-y-3">
+            </div>
+    </div>
+
+    <div id="global-notif" class="fixed top-5 right-0 hidden z-[60] bg-[#d4af37] text-black p-4 font-bold gift-notif">
+        🎉 <span id="notif-text"></span>
+    </div>
+
+    <script>
+        // PASTE YOUR FIREBASE CONFIG HERE
+        const firebaseConfig = {
+          apiKey: "AIzaSyBs81OlYrQ1_HBUHJ3Tim1vT-2glHOZPbc",
+          authDomain: "pyramidgame2026.firebaseapp.com",
+          projectId: "pyramidgame2026",
+          storageBucket: "pyramidgame2026.firebasestorage.app",
+          messagingSenderId: "302574478188",
+          appId: "1:302574478188:web:aded8d66bdd1f828da8949"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // 1. Logic for Registration
+        async function handleRegister() {
+            const name = document.getElementById('reg-name').value.trim();
+            const gender = document.getElementById('reg-gender').value;
+
+            // This is your whitelist check
+            const whiteList = ["User1", "User2", "User3"]; // Add all real names here
+            
+            if (!whiteList.includes(name)) {
+                alert("Name not recognized in the classmate list.");
+                return;
+            }
+
+            // Save user to Firebase
+            await db.collection("users").doc(name).set({
+                name: name,
+                gender: gender,
+                credits: 100000,
+                title: "Commoner",
+                votes: 0,
+                voted: false
+            });
+
+            localStorage.setItem('pyramidName', name);
+            location.reload();
+        }
+
+        // 2. Load App if logged in
+        window.onload = () => {
+            const savedName = localStorage.getItem('pyramidName');
+            if(savedName) {
+                document.getElementById('reg-page').classList.add('hidden');
+                document.getElementById('app-page').classList.remove('hidden');
+                loadData(savedName);
+            }
+        };
+
+        // 3. Admin Secret: Long press the "THE PYRAMID" title in registration
+        // or a hidden element to trigger the admin password.
+    </script>
+</body>
+</html>
