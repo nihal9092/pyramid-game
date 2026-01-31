@@ -97,7 +97,25 @@
             </div>
 
         <button onclick="logout()" class="mt-10 text-[10px] text-zinc-600 uppercase tracking-widest hover:text-red-500">Terminate Session</button>
+   <div class="mt-16 bg-[#0a0a0a] border border-zinc-900 rounded-sm overflow-hidden gold-glow">
+    <div class="p-4 border-b border-zinc-900 bg-zinc-900/20 flex justify-between items-center">
+        <h3 class="cinzel text-xs tracking-[0.4em] text-[#d4af37]">Grand Hall Chat</h3>
+        <div id="typing-display" class="text-[9px] text-zinc-600 italic tracking-tighter"></div>
     </div>
+    
+    <div id="chat-box" class="h-80 overflow-y-auto p-4 flex flex-col-reverse bg-[radial-gradient(circle_at_top,#111_0%,#000_100%)]">
+        </div>
+
+    <div class="p-4 bg-black/50 border-t border-zinc-900 flex gap-2">
+        <input id="chat-input" 
+               onkeypress="if(event.key==='Enter') sendMessage()"
+               placeholder="Whisper to the hierarchy..." 
+               class="flex-1 bg-transparent border border-zinc-800 p-3 text-xs text-white focus:border-[#d4af37] outline-none transition-all placeholder:text-zinc-700">
+        <button onclick="sendMessage()" class="bg-[#d4af37] text-black px-6 text-[10px] font-bold cinzel hover:bg-yellow-600 transition-all">
+            SEND
+        </button>
+    </div>
+   </div> </div>
 
     <script>
         // FIREBASE INITIALIZATION
