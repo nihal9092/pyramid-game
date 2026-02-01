@@ -1,20 +1,19 @@
 /**
- * chat.js - Enhanced Chat & Gift System
+ * chat.js - Enhanced Chat & Gift System with Sounds & Animations
  * 
  * Features:
- * - Real-time messaging with proper event handling
- * - Title badges in chat messages
- * - Gift sending with visual effects
- * - Typing indicators
- * - Message animations
+ * - Tier-based gift sounds and animations
+ * - Real-time messaging with title badges
+ * - Epic gift effects for all users
+ * - Admin broadcast sounds
  * 
- * @version 3.0.0
+ * @version 4.0.0
  */
 
 'use strict';
 
 // ============================================
-// GIFT CATALOG
+// GIFT CATALOG WITH SOUNDS
 // ============================================
 
 const GIFT_CATALOG = {
@@ -31,6 +30,25 @@ const GIFT_CATALOG = {
   'Rolls Royce': { icon: '🚙', price: 150000, tier: 'legendary' },
   'Private Jet': { icon: '✈️', price: 300000, tier: 'mythic' },
   'Bag of Cash': { icon: '💰', price: 500000, tier: 'mythic' }
+};
+
+// ============================================
+// SOUND EFFECTS BY TIER
+// ============================================
+
+const SOUND_EFFECTS = {
+  // Gift sounds by tier
+  common: 'https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3',
+  uncommon: 'https://assets.mixkit.co/active_storage/sfx/2018/2018-preview.mp3',
+  rare: 'https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3',
+  epic: 'https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3',
+  legendary: 'https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3',
+  mythic: 'https://assets.mixkit.co/active_storage/sfx/2001/2001-preview.mp3',
+  
+  // Other sounds
+  message: 'https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3',
+  adminBroadcast: 'https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3',
+  system: 'https://assets.mixkit.co/active_storage/sfx/951/951-preview.mp3'
 };
 
 // Title tier colors
@@ -62,8 +80,50 @@ const ChatState = {
   unsubscribers: [],
   lastMessageTime: 0,
   typingTimer: null,
-  messagesListener: null
+  messagesListener: null,
+  audioCache: new Map()
 };
+
+// ============================================
+// AUDIO SYSTEM
+// ============================================
+
+/**
+ * Get or create cached audio element
+ */
+function getAudioElement(url) {
+  if (!url) return null;
+  
+  if (ChatState.audioCache.has(url)) {
+    return ChatState.audioCache.get(url);
+  }
+  
+  try {
+    const audio = new Audio(url);
+    audio.volume = 0.7;
+    ChatState.audioCache.set(url, audio);
+    return audio;
+  } catch (error) {
+    console.warn('Audio creation failed:', error);
+    return null;
+  }
+}
+
+/**
+ * Play sound effect
+ */
+function playSoundEffect(soundKey) {
+  const url = SOUND_EFFECTS[soundKey];
+  if (!url) return;
+  
+  const audio = getAudioElement(url);
+  if (!audio) return;
+  
+  audio.currentTime = 0;
+  audio.play().catch(error => {
+    console.debug('Audio playback prevented:', error);
+  });
+}
 
 // ============================================
 // INITIALIZATION
@@ -94,7 +154,7 @@ async function initChat() {
     ]);
     
     ChatState.isInitialized = true;
-    console.log('✅ Chat system initialized');
+    console.log('✅ Chat system initialized with sounds & animations');
     
   } catch (error) {
     console.error('Chat initialization failed:', error);
@@ -116,6 +176,7 @@ function cleanupChat() {
   
   ChatState.unsubscribers = [];
   ChatState.isInitialized = false;
+  ChatState.audioCache.clear();
   
   console.log('Chat cleaned up');
 }
@@ -128,12 +189,30 @@ function initializeMessageListener() {
   const chatBox = document.getElementById('chat-box');
   if (!chatBox) return;
 
-  // Listen to messages in real-time
   const unsubscribe = db.collection('messages')
     .orderBy('time', 'desc')
     .limit(CHAT_CONFIG.maxMessagesDisplay)
     .onSnapshot(
       (snapshot) => {
+        // Track new messages for sound/animation
+        snapshot.docChanges().forEach(change => {
+          if (change.type === 'added') {
+            const msg = { id: change.doc.id, ...change.doc.data() };
+            
+            // Play sounds and show animations for new messages
+            if (msg.type === 'GIFT') {
+              const giftData = GIFT_CATALOG[msg.giftName];
+              if (giftData) {
+                playSoundEffect(giftData.tier);
+                triggerGiftAnimation(msg, giftData.tier);
+              }
+            } else if (msg.user === 'SYSTEM' && msg.text.includes('ADMIN ANNOUNCEMENT')) {
+              playSoundEffect('adminBroadcast');
+            }
+          }
+        });
+        
+        // Render all messages
         chatBox.innerHTML = '';
         
         const messages = [];
@@ -141,13 +220,11 @@ function initializeMessageListener() {
           messages.push({ id: doc.id, ...doc.data() });
         });
         
-        // Reverse to show oldest first
         messages.reverse().forEach(msg => {
           const messageEl = createMessageElement(msg);
           chatBox.appendChild(messageEl);
         });
         
-        // Auto scroll to bottom
         chatBox.scrollTop = chatBox.scrollHeight;
       },
       (error) => {
@@ -167,7 +244,6 @@ function createMessageElement(message) {
   const messageDiv = document.createElement('div');
   const currentUser = ChatState.currentUser;
   
-  // Message type handling
   if (message.type === 'GIFT') {
     return createGiftMessage(message);
   }
@@ -176,11 +252,9 @@ function createMessageElement(message) {
     return createSystemMessage(message);
   }
   
-  // Regular message
   const isOwn = message.user === currentUser;
   messageDiv.className = `chat-message ${isOwn ? 'own' : 'other'}`;
   
-  // Message header with title badge
   const header = document.createElement('div');
   header.className = 'flex items-center gap-2 mb-1';
   
@@ -188,7 +262,6 @@ function createMessageElement(message) {
   userName.className = `font-semibold text-sm ${isOwn ? 'text-purple-300' : 'text-white'}`;
   userName.textContent = message.user;
   
-  // Add title badge
   const titleBadge = document.createElement('span');
   const userTitle = message.title || 'Commoner';
   const titleColor = TITLE_COLORS[userTitle] || TITLE_COLORS['Commoner'];
@@ -203,7 +276,6 @@ function createMessageElement(message) {
   header.appendChild(titleBadge);
   header.appendChild(timestamp);
   
-  // Message content
   const content = document.createElement('div');
   content.className = 'text-sm text-white break-words';
   content.textContent = message.text;
@@ -214,9 +286,6 @@ function createMessageElement(message) {
   return messageDiv;
 }
 
-/**
- * Create system message element
- */
 function createSystemMessage(message) {
   const messageDiv = document.createElement('div');
   messageDiv.className = 'chat-message system';
@@ -235,9 +304,6 @@ function createSystemMessage(message) {
   return messageDiv;
 }
 
-/**
- * Create gift message element
- */
 function createGiftMessage(message) {
   const messageDiv = document.createElement('div');
   messageDiv.className = 'chat-message gift';
@@ -258,7 +324,7 @@ function createGiftMessage(message) {
     <span class="font-bold">${sanitizeText(message.user)}</span>
     <span class="text-pink-300"> sent </span>
     <span class="font-bold text-yellow-300">${message.giftName}</span>
-    <span class="text-pink-300"> to </span>
+    <span class="text-pink-300"> (${giftData.tier.toUpperCase()}) to </span>
     <span class="font-bold">${sanitizeText(message.target)}</span>
   `;
   
@@ -268,9 +334,6 @@ function createGiftMessage(message) {
   return messageDiv;
 }
 
-/**
- * Format timestamp
- */
 function formatTime(timestamp) {
   if (!timestamp) return '';
   
@@ -290,9 +353,6 @@ function formatTime(timestamp) {
   }
 }
 
-/**
- * Sanitize text to prevent XSS
- */
 function sanitizeText(text) {
   if (!text || typeof text !== 'string') return '';
   const div = document.createElement('div');
@@ -301,416 +361,228 @@ function sanitizeText(text) {
 }
 
 // ============================================
-// INPUT HANDLERS
+// GIFT ANIMATIONS BY TIER
 // ============================================
-
-function initializeInputHandlers() {
-  const chatInput = document.getElementById('chat-input');
-  const sendButton = document.getElementById('send-chat');
-  
-  if (!chatInput || !sendButton) {
-    console.warn('Chat UI elements not found');
-    return;
-  }
-  
-  // Send button click
-  sendButton.addEventListener('click', handleSendMessage);
-  
-  // Enter key to send
-  chatInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
-    }
-  });
-  
-  // Typing indicator
-  chatInput.addEventListener('input', () => {
-    updateTypingStatus(true);
-    
-    clearTimeout(ChatState.typingTimer);
-    ChatState.typingTimer = setTimeout(() => {
-      updateTypingStatus(false);
-    }, CHAT_CONFIG.typingTimeout);
-  });
-  
-  console.log('✅ Input handlers initialized');
-}
 
 /**
- * Handle sending a message
+ * Trigger gift animation based on tier
  */
-async function handleSendMessage() {
-  const input = document.getElementById('chat-input');
-  if (!input) return;
+function triggerGiftAnimation(message, tier) {
+  const giftData = GIFT_CATALOG[message.giftName];
+  if (!giftData) return;
   
-  const text = input.value.trim();
-  
-  if (!text) return;
-  
-  if (text.length > CHAT_CONFIG.maxMessageLength) {
-    showError(`Message too long. Maximum ${CHAT_CONFIG.maxMessageLength} characters.`);
-    return;
-  }
-  
-  // Rate limiting
-  const now = Date.now();
-  if (now - ChatState.lastMessageTime < CHAT_CONFIG.messageRateLimit) {
-    showError('Please wait a moment before sending another message.');
-    return;
-  }
-  
-  try {
-    await sendMessage(text);
-    input.value = '';
-    ChatState.lastMessageTime = now;
-    updateTypingStatus(false);
-  } catch (error) {
-    console.error('Send message error:', error);
-    showError(error.message || 'Failed to send message');
-  }
-}
-
-/**
- * Send a message to Firestore
- */
-async function sendMessage(text) {
-  if (!ChatState.currentUser) {
-    throw new Error('Not authenticated');
-  }
-  
-  if (!text || text.trim().length === 0) {
-    throw new Error('Message cannot be empty');
-  }
-  
-  // Get user's title
-  const userDoc = await db.collection('users').doc(ChatState.currentUser).get();
-  const userTitle = userDoc.exists ? (userDoc.data().title || 'Commoner') : 'Commoner';
-  
-  await db.collection('messages').add({
-    user: ChatState.currentUser,
-    title: userTitle,
-    text: sanitizeText(text),
-    type: 'MSG',
-    time: Date.now()
-  });
-  
-  console.log('Message sent:', text);
-}
-
-// ============================================
-// TYPING INDICATOR
-// ============================================
-
-function initializeTypingIndicator() {
-  if (!ChatState.currentUser) return;
-  
-  // Listen for typing status from other users
-  const unsubscribe = db.collection('status')
-    .onSnapshot((snapshot) => {
-      const typingUsers = [];
+  switch(tier) {
+    case 'common':
+    case 'uncommon':
+      // Simple notification (sender/receiver only)
+      if (ChatState.currentUser === message.user || ChatState.currentUser === message.target) {
+        showSimpleGiftNotification(message, giftData);
+      }
+      break;
       
-      snapshot.forEach(doc => {
-        if (doc.id !== ChatState.currentUser) {
-          const data = doc.data();
-          if (data.typing && data.timestamp) {
-            const timeDiff = Date.now() - data.timestamp.toMillis();
-            if (timeDiff < CHAT_CONFIG.typingTimeout) {
-              typingUsers.push(doc.id);
-            }
-          }
-        }
-      });
+    case 'rare':
+      // Medium animation (sender/receiver)
+      if (ChatState.currentUser === message.user || ChatState.currentUser === message.target) {
+        showRareGiftAnimation(message, giftData);
+      }
+      break;
       
-      updateTypingDisplay(typingUsers);
-    });
-  
-  ChatState.unsubscribers.push(unsubscribe);
-}
-
-function updateTypingStatus(isTyping) {
-  if (!ChatState.currentUser) return;
-  
-  db.collection('status')
-    .doc(ChatState.currentUser)
-    .set({
-      typing: isTyping,
-      timestamp: firebase.firestore.FieldValue.serverTimestamp()
-    }, { merge: true })
-    .catch(error => {
-      console.error('Update typing status error:', error);
-    });
-}
-
-function updateTypingDisplay(users) {
-  const indicator = document.getElementById('typing-indicator');
-  if (!indicator) return;
-  
-  if (users.length > 0) {
-    indicator.textContent = users.length === 1 
-      ? `${users[0]} is typing...` 
-      : `${users.length} people are typing...`;
-    indicator.classList.remove('hidden');
-  } else {
-    indicator.classList.add('hidden');
+    case 'epic':
+      // Everyone sees it!
+      showEpicGiftAnimation(message, giftData);
+      break;
+      
+    case 'legendary':
+      // Cooler animation for everyone
+      showLegendaryGiftAnimation(message, giftData);
+      break;
+      
+    case 'mythic':
+      // COOLEST animation for everyone
+      showMythicGiftAnimation(message, giftData);
+      break;
   }
-}
-
-// ============================================
-// GIFT SYSTEM
-// ============================================
-
-/**
- * Open gift modal for a user
- */
-function openGiftModal(targetUser) {
-  if (!ChatState.currentUser) {
-    showError('You must be logged in to send gifts');
-    return;
-  }
-  
-  if (targetUser === ChatState.currentUser) {
-    showError('You cannot send gifts to yourself');
-    return;
-  }
-  
-  createGiftModal(targetUser);
 }
 
 /**
- * Create gift selection modal
+ * Simple gift notification (common/uncommon)
  */
-function createGiftModal(targetUser) {
-  // Remove existing modal if any
-  const existing = document.getElementById('gift-modal-overlay');
-  if (existing) existing.remove();
-  
-  const overlay = document.createElement('div');
-  overlay.id = 'gift-modal-overlay';
-  overlay.className = 'fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[10000] p-4';
-  overlay.onclick = (e) => {
-    if (e.target === overlay) closeGiftModal();
-  };
-  
-  const modal = document.createElement('div');
-  modal.className = 'glass-card max-w-4xl w-full max-h-[90vh] overflow-y-auto p-6 rounded-3xl';
-  modal.onclick = (e) => e.stopPropagation();
-  
-  // Header
-  const header = document.createElement('div');
-  header.className = 'mb-6';
-  header.innerHTML = `
-    <div class="flex justify-between items-center">
+function showSimpleGiftNotification(message, giftData) {
+  const notification = document.createElement('div');
+  notification.className = 'fixed top-24 right-4 glass-card border-2 border-pink-500 text-white px-6 py-4 rounded-2xl shadow-2xl z-[9999] max-w-sm';
+  notification.innerHTML = `
+    <div class="flex items-center gap-3">
+      <span class="text-4xl">${giftData.icon}</span>
       <div>
-        <h2 class="cinzel text-2xl gradient-text font-bold">Send a Gift</h2>
-        <p class="text-sm text-zinc-400 mt-1">To: <span class="font-bold text-white">${sanitizeText(targetUser)}</span></p>
+        <div class="font-bold text-sm">${message.user} → ${message.target}</div>
+        <div class="text-xs text-pink-300">${message.giftName} (${giftData.price.toLocaleString()} CR)</div>
       </div>
-      <button onclick="closeGiftModal()" class="text-3xl text-zinc-400 hover:text-white transition-colors">×</button>
     </div>
   `;
-  modal.appendChild(header);
   
-  // Gift grid
-  const grid = document.createElement('div');
-  grid.className = 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6';
+  document.body.appendChild(notification);
   
-  Object.entries(GIFT_CATALOG).forEach(([giftName, giftData]) => {
-    const card = createGiftCard(giftName, giftData, targetUser);
-    grid.appendChild(card);
-  });
+  setTimeout(() => {
+    notification.style.transition = 'opacity 0.3s ease';
+    notification.style.opacity = '0';
+    setTimeout(() => notification.remove(), 300);
+  }, 3000);
+}
+
+/**
+ * Rare gift animation (sender/receiver)
+ */
+function showRareGiftAnimation(message, giftData) {
+  const overlay = document.createElement('div');
+  overlay.className = 'fixed inset-0 z-[9998] flex items-center justify-center pointer-events-none';
+  overlay.style.background = 'radial-gradient(circle, rgba(6, 182, 212, 0.2) 0%, transparent 70%)';
   
-  modal.appendChild(grid);
+  overlay.innerHTML = `
+    <div class="text-center animate-pulse">
+      <div class="text-9xl mb-4" style="animation: bounce 0.5s ease-in-out 3;">${giftData.icon}</div>
+      <div class="text-2xl font-bold text-cyan-400 mb-2">${message.giftName}</div>
+      <div class="text-lg text-white">
+        <span class="font-bold">${sanitizeText(message.user)}</span>
+        <span class="text-cyan-300"> → </span>
+        <span class="font-bold">${sanitizeText(message.target)}</span>
+      </div>
+      <div class="text-sm text-cyan-400 mt-2">${giftData.price.toLocaleString()} Credits</div>
+    </div>
+  `;
   
-  overlay.appendChild(modal);
   document.body.appendChild(overlay);
+  
+  setTimeout(() => {
+    overlay.style.transition = 'opacity 0.5s ease';
+    overlay.style.opacity = '0';
+    setTimeout(() => overlay.remove(), 500);
+  }, 2500);
 }
 
 /**
- * Create gift card element
+ * Epic gift animation (EVERYONE sees)
  */
-function createGiftCard(giftName, giftData, targetUser) {
-  const card = document.createElement('button');
-  card.className = 'glass-card p-4 rounded-2xl hover:border-[#FFD700] transition-all flex flex-col items-center gap-2 group';
+function showEpicGiftAnimation(message, giftData) {
+  const overlay = document.createElement('div');
+  overlay.className = 'fixed inset-0 z-[9998] flex items-center justify-center pointer-events-none';
+  overlay.style.background = 'radial-gradient(circle, rgba(147, 51, 234, 0.3) 0%, rgba(236, 72, 153, 0.2) 50%, transparent 100%)';
   
-  const icon = document.createElement('div');
-  icon.className = 'text-5xl group-hover:scale-125 transition-transform';
-  icon.textContent = giftData.icon;
-  
-  const name = document.createElement('div');
-  name.className = 'font-bold text-sm text-white';
-  name.textContent = giftName;
-  
-  const price = document.createElement('div');
-  price.className = 'text-xs text-zinc-400';
-  price.textContent = `${giftData.price.toLocaleString()} CR`;
-  
-  const tier = document.createElement('div');
-  tier.className = 'text-[10px] uppercase tracking-wider font-bold';
-  
-  const tierColors = {
-    common: 'text-gray-400',
-    uncommon: 'text-green-400',
-    rare: 'text-blue-400',
-    epic: 'text-purple-400',
-    legendary: 'text-yellow-400',
-    mythic: 'text-red-400'
-  };
-  tier.className += ' ' + (tierColors[giftData.tier] || tierColors.common);
-  tier.textContent = giftData.tier;
-  
-  card.appendChild(icon);
-  card.appendChild(name);
-  card.appendChild(price);
-  card.appendChild(tier);
-  
-  card.onclick = () => confirmAndSendGift(ChatState.currentUser, targetUser, giftName, giftData.price);
-  
-  return card;
-}
-
-/**
- * Confirm and send gift
- */
-async function confirmAndSendGift(sender, recipient, giftName, price) {
-  const confirmed = confirm(
-    `Send ${giftName} (${price.toLocaleString()} CR) to ${recipient}?\n\nThis cannot be undone.`
-  );
-  
-  if (!confirmed) return;
-  
-  closeGiftModal();
-  
-  try {
-    await executeGiftTransaction(sender, recipient, giftName, price);
-    showSuccess(`Gift sent successfully!`);
-  } catch (error) {
-    console.error('Gift error:', error);
-    showError(error.message || 'Failed to send gift');
-  }
-}
-
-/**
- * Execute gift transaction
- */
-async function executeGiftTransaction(sender, recipient, giftName, price) {
-  const senderRef = db.collection('users').doc(sender);
-  const recipientRef = db.collection('users').doc(recipient);
-  
-  await db.runTransaction(async (transaction) => {
-    const senderDoc = await transaction.get(senderRef);
-    const recipientDoc = await transaction.get(recipientRef);
-    
-    if (!senderDoc.exists) throw new Error('Sender not found');
-    if (!recipientDoc.exists) throw new Error('Recipient not found');
-    
-    const senderCredits = senderDoc.data().credits || 0;
-    const recipientCredits = recipientDoc.data().credits || 0;
-    
-    if (senderCredits < price) {
-      throw new Error(`Insufficient credits. You have ${senderCredits.toLocaleString()}, need ${price.toLocaleString()}`);
-    }
-    
-    transaction.update(senderRef, {
-      credits: senderCredits - price,
-      lastGiftSent: firebase.firestore.FieldValue.serverTimestamp()
-    });
-    
-    transaction.update(recipientRef, {
-      credits: recipientCredits + price,
-      lastGiftReceived: firebase.firestore.FieldValue.serverTimestamp()
-    });
-  });
-  
-  // Record gift in chat
-  await db.collection('messages').add({
-    user: sender,
-    target: recipient,
-    giftName: giftName,
-    type: 'GIFT',
-    time: Date.now()
-  });
-}
-
-function closeGiftModal() {
-  const overlay = document.getElementById('gift-modal-overlay');
-  if (overlay) overlay.remove();
-}
-
-// ============================================
-// NOTIFICATIONS
-// ============================================
-
-function showError(message) {
-  const notification = document.createElement('div');
-  notification.className = 'fixed top-24 right-4 glass-card border-2 border-red-500 text-white px-6 py-4 rounded-2xl shadow-2xl z-[9999] max-w-sm';
-  notification.innerHTML = `
-    <div class="flex items-center gap-3">
-      <span class="text-2xl">❌</span>
-      <div class="text-sm">${sanitizeText(message)}</div>
+  overlay.innerHTML = `
+    <div class="text-center">
+      <div class="text-6xl mb-4 font-bold text-purple-400 animate-pulse">✨ EPIC GIFT ✨</div>
+      <div class="text-[120px] mb-6" style="animation: scaleIn 0.5s ease-out, bounce 0.5s ease-in-out 4;">${giftData.icon}</div>
+      <div class="text-3xl font-black text-white mb-3 gradient-text">${message.giftName}</div>
+      <div class="text-xl text-white">
+        <span class="font-bold text-purple-300">${sanitizeText(message.user)}</span>
+        <span class="text-pink-300"> sent to </span>
+        <span class="font-bold text-purple-300">${sanitizeText(message.target)}</span>
+      </div>
+      <div class="text-lg text-purple-400 mt-3 font-bold">${giftData.price.toLocaleString()} CR</div>
+      <div class="flex justify-center gap-4 mt-6">
+        <div class="w-32 h-1 bg-gradient-to-r from-transparent via-purple-500 to-transparent"></div>
+        <div class="w-32 h-1 bg-gradient-to-r from-transparent via-pink-500 to-transparent"></div>
+      </div>
     </div>
   `;
   
-  document.body.appendChild(notification);
+  document.body.appendChild(overlay);
+  
+  // Screen flash effect
+  document.body.style.animation = 'flashPurple 0.3s ease-in-out 2';
   
   setTimeout(() => {
-    notification.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
-    notification.style.opacity = '0';
-    notification.style.transform = 'translateX(400px)';
-    
-    setTimeout(() => notification.remove(), 300);
+    overlay.style.transition = 'opacity 0.7s ease';
+    overlay.style.opacity = '0';
+    setTimeout(() => {
+      overlay.remove();
+      document.body.style.animation = '';
+    }, 700);
   }, 3000);
 }
 
-function showSuccess(message) {
-  const notification = document.createElement('div');
-  notification.className = 'fixed top-24 right-4 glass-card border-2 border-green-500 text-white px-6 py-4 rounded-2xl shadow-2xl z-[9999] max-w-sm';
-  notification.innerHTML = `
-    <div class="flex items-center gap-3">
-      <span class="text-2xl">✅</span>
-      <div class="text-sm">${sanitizeText(message)}</div>
+/**
+ * Legendary gift animation (COOLER for everyone)
+ */
+function showLegendaryGiftAnimation(message, giftData) {
+  const overlay = document.createElement('div');
+  overlay.className = 'fixed inset-0 z-[9999] flex items-center justify-center pointer-events-none';
+  overlay.style.background = 'radial-gradient(circle, rgba(255, 215, 0, 0.3) 0%, rgba(255, 165, 0, 0.2) 50%, transparent 100%)';
+  
+  overlay.innerHTML = `
+    <div class="text-center relative">
+      <!-- Sparkles -->
+      <div class="absolute inset-0 flex items-center justify-center">
+        <div class="text-6xl animate-ping" style="animation-duration: 1.5s;">✨</div>
+      </div>
+      
+      <div class="text-7xl mb-4 font-black cinzel animate-pulse" style="background: linear-gradient(135deg, #FFD700, #FFA500); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-shadow: 0 0 30px rgba(255, 215, 0, 0.8);">
+        ⭐ LEGENDARY GIFT ⭐
+      </div>
+      
+      <div class="text-[140px] mb-6 relative z-10" style="animation: scaleIn 0.6s ease-out, bounce 0.6s ease-in-out 5, rotate 3s linear infinite;">
+        ${giftData.icon}
+      </div>
+      
+      <div class="text-4xl font-black mb-4" style="background: linear-gradient(135deg, #FFD700, #FFA500); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+        ${message.giftName}
+      </div>
+      
+      <div class="text-2xl text-white mb-3">
+        <span class="font-black text-yellow-300">${sanitizeText(message.user)}</span>
+        <span class="text-yellow-500"> ⇨ </span>
+        <span class="font-black text-yellow-300">${sanitizeText(message.target)}</span>
+      </div>
+      
+      <div class="text-2xl font-black text-yellow-400 mb-6">${giftData.price.toLocaleString()} CREDITS</div>
+      
+      <!-- Decorative lines -->
+      <div class="flex justify-center gap-6">
+        <div class="w-40 h-2 bg-gradient-to-r from-transparent via-yellow-500 to-transparent animate-pulse"></div>
+        <div class="w-40 h-2 bg-gradient-to-r from-transparent via-orange-500 to-transparent animate-pulse"></div>
+      </div>
     </div>
   `;
   
-  document.body.appendChild(notification);
+  document.body.appendChild(overlay);
+  
+  // Golden screen flash
+  document.body.style.animation = 'flashGold 0.4s ease-in-out 3';
   
   setTimeout(() => {
-    notification.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
-    notification.style.opacity = '0';
-    notification.style.transform = 'translateX(400px)';
-    
-    setTimeout(() => notification.remove(), 300);
-  }, 3000);
+    overlay.style.transition = 'opacity 1s ease';
+    overlay.style.opacity = '0';
+    setTimeout(() => {
+      overlay.remove();
+      document.body.style.animation = '';
+    }, 1000);
+  }, 4000);
 }
 
-// ============================================
-// INITIALIZATION
-// ============================================
-
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => {
-    initChat().catch(error => {
-      console.error('Chat init failed:', error);
-    });
-  });
-} else {
-  initChat().catch(error => {
-    console.error('Chat init failed:', error);
-  });
-}
-
-window.addEventListener('beforeunload', cleanupChat);
-
-// Export functions
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = {
-    initChat,
-    cleanupChat,
-    sendMessage,
-    openGiftModal
-  };
-}
-
-// Make functions globally accessible
-window.openGiftModal = openGiftModal;
-window.closeGiftModal = closeGiftModal;
-window.sendMessage = sendMessage;
+/**
+ * Mythic gift animation (COOLEST for everyone)
+ */
+function showMythicGiftAnimation(message, giftData) {
+  const overlay = document.createElement('div');
+  overlay.className = 'fixed inset-0 z-[10000] flex items-center justify-center pointer-events-none overflow-hidden';
+  overlay.style.background = 'radial-gradient(circle, rgba(239, 68, 68, 0.4) 0%, rgba(220, 38, 38, 0.3) 30%, rgba(147, 51, 234, 0.2) 60%, transparent 100%)';
+  
+  overlay.innerHTML = `
+    <div class="text-center relative">
+      <!-- Cosmic background effect -->
+      <div class="absolute inset-0">
+        <div class="absolute top-1/4 left-1/4 w-32 h-32 bg-red-500 rounded-full blur-3xl animate-pulse opacity-50"></div>
+        <div class="absolute top-1/3 right-1/4 w-40 h-40 bg-purple-500 rounded-full blur-3xl animate-pulse opacity-50" style="animation-delay: 0.5s;"></div>
+        <div class="absolute bottom-1/4 left-1/3 w-36 h-36 bg-pink-500 rounded-full blur-3xl animate-pulse opacity-50" style="animation-delay: 1s;"></div>
+      </div>
+      
+      <!-- Main content -->
+      <div class="relative z-10">
+        <div class="text-8xl mb-6 font-black cinzel animate-pulse" style="background: linear-gradient(135deg, #EF4444, #DC2626, #9333EA, #EC4899); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-shadow: 0 0 40px rgba(239, 68, 68, 1), 0 0 80px rgba(147, 51, 234, 0.8); animation: glowPulse 2s ease-in-out infinite;">
+          🌟 MYTHIC GIFT 🌟
+        </div>
+        
+        <div class="text-[160px] mb-8 drop-shadow-2xl" style="animation: scaleIn 0.8s ease-out, bounce 0.7s ease-in-out 6, rotate360 4s ease-in-out infinite; filter: drop-shadow(0 0 40px rgba(239, 68, 68, 0.8));">
+          ${giftData.icon}
+        </div>
+        
+        <div class="text-5xl font-black mb-6 t
