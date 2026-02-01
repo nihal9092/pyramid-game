@@ -628,3 +628,4 @@ window.handleVote = voteFor;
 window.resetAllVotes = resetAllVotes;
 window.getUserVotingStats = getUserVotingStats;
 window.getTopVoted = getTopVoted;
+                          
