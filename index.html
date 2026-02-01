@@ -8,33 +8,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
     <style>
-        /* Bounty Pulse Effect */
-.bounty-target {
-    border: 2px solid #ff4444 !important;
-    background: linear-gradient(45deg, #2a0000, #0a0a0a) !important;
-    animation: bountyPulse 1.5s infinite alternate;
-}
-
-@keyframes bountyPulse {
-    from { box-shadow: 0 0 5px #ff0000; }
-    to { box-shadow: 0 0 20px #ff0000; }
-}
-
-/* Luxury Aura Glows */
-.aura-gold { text-shadow: 0 0 10px #d4af37; color: #fff; font-weight: bold; }
-.aura-rainbow { 
-    background: linear-gradient(to right, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #8b00ff);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    animation: rainbowMove 3s linear infinite;
-}
-
-@keyframes rainbowMove {
-    0% { background-position: 0% 50%; }
-    100% { background-position: 100% 50%; }
-}
-        @keyframes slideDown { from { transform: translateY(-100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        .animate-slideDown { animation: slideDown 0.5s ease-out forwards; transition: all 0.5s ease-out; }
+        /* --- KEEPING YOUR ORIGINAL STYLES --- */
         @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Inter:wght@300;400;600&display=swap');
         :root { --gold: #d4af37; --dark: #0a0a0a; }
         body { background-color: var(--dark); color: #e5e5e5; font-family: 'Inter', sans-serif; overflow-x: hidden; }
@@ -44,7 +18,8 @@
         .fade-in { animation: fadeIn 0.8s ease-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .user-card:hover { background: rgba(212,175,55,0.04); transform: scale(1.01); transition: all 0.25s ease; }
-        /* Welcome overlay */
+        
+        /* Your Pyramid Animation Styles */
         #welcome-overlay { position: fixed; inset: 0; display:flex; align-items:center; justify-content:center; background: linear-gradient(180deg, rgba(0,0,0,0.6), rgba(0,0,0,0.85)); backdrop-filter: blur(6px); z-index:50; opacity:0; pointer-events:none; transition:opacity .4s ease; }
         #welcome-overlay.show { opacity:1; pointer-events:auto; }
         .pyramid-anim { width: 260px; height: 220px; display:block; margin:0 auto; }
@@ -56,6 +31,37 @@
         .pyramid-anim .layer.l5 { animation-delay: 0.45s; }
         @keyframes pop { from { transform: translateY(-20px) scale(0.6); opacity:0; } to { transform: translateY(0) scale(1); opacity:1; } }
         .btn-primary { background: linear-gradient(90deg, #d4af37, #f0c85a); color: #0b0b0b; }
+
+        /* --- ADDING THE GLITCH & BOUNTY EFFECTS --- */
+        @keyframes glitch {
+            0% { transform: translate(0); }
+            20% { transform: translate(-3px, 2px); }
+            40% { transform: translate(-3px, -2px); }
+            60% { transform: translate(3px, 2px); }
+            80% { transform: translate(3px, -2px); }
+            100% { transform: translate(0); }
+        }
+        .glitch-text { text-shadow: 2px 0 #ff0000, -2px 0 #00ffff; animation: glitch 0.3s infinite; }
+        .shake-anim { animation: screenShake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
+        @keyframes screenShake {
+            10%, 90% { transform: translate3d(-2px, 0, 0); }
+            20%, 80% { transform: translate3d(4px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-6px, 0, 0); }
+            40%, 60% { transform: translate3d(6px, 0, 0); }
+        }
+        .bounty-target {
+            background: repeating-linear-gradient(45deg, #1a0000, #1a0000 10px, #000 10px, #000 20px) !important;
+            border: 2px solid #ff0000 !important;
+            position: relative;
+            overflow: hidden;
+            animation: bountyPulse 1.5s infinite alternate;
+        }
+        .bounty-target::after {
+            content: "WANTED"; position: absolute; top: 10px; right: -35px;
+            background: #ff0000; color: white; font-size: 8px; font-weight: bold;
+            padding: 2px 40px; transform: rotate(45deg); box-shadow: 0 0 10px red;
+        }
+        @keyframes bountyPulse { from { box-shadow: 0 0 5px #ff0000; } to { box-shadow: 0 0 20px #ff0000; } }
     </style>
 </head>
 <body>
@@ -66,59 +72,45 @@
             <div class="p-8 border border-zinc-800 rounded-md gold-glow bg-black/60">
                 <h1 class="cinzel text-4xl text-[#d4af37] tracking-[0.2em] mb-2">PYRAMID</h1>
                 <p class="text-[11px] tracking-[0.4em] text-zinc-500 mb-6 uppercase">Social Hierarchy Protocol</p>
-
                 <div class="space-y-4">
-                    <div class="flex gap-2">
-                        <input id="auth-name" type="text" placeholder="Full Real Name" class="flex-1 bg-zinc-900/40 border border-zinc-800 p-3 text-sm focus:border-[#d4af37] outline-none" />
-                    </div>
+                    <input id="auth-name" type="text" placeholder="Full Real Name" class="w-full bg-zinc-900/40 border border-zinc-800 p-3 text-sm focus:border-[#d4af37] outline-none" />
                     <div class="flex gap-2">
                         <select id="auth-gender" class="flex-1 bg-zinc-900/40 border border-zinc-800 p-3 text-sm outline-none">
                             <option value="">Select Gender</option>
                             <option value="Male">Male</option>
                             <option value="Female">Female</option>
-                            <option value="Other">Other</option>
                         </select>
                         <input id="auth-roll" type="text" placeholder="Roll Number" class="w-1/2 bg-zinc-900/40 border border-zinc-800 p-3 text-sm outline-none" />
                     </div>
                     <div class="flex gap-2">
                         <input id="auth-class" type="text" placeholder="Class (e.g. 11)" class="flex-1 bg-zinc-900/40 border border-zinc-800 p-3 text-sm outline-none" />
-                        <input id="auth-sec" type="text" placeholder="Section (e.g. A)" class="w-1/4 bg-zinc-900/40 border border-zinc-800 p-3 text-sm outline-none" />
+                        <input id="auth-sec" type="text" placeholder="Sec" class="w-1/4 bg-zinc-900/40 border border-zinc-800 p-3 text-sm outline-none" />
                     </div>
-                    <input id="auth-email" type="email" placeholder="Email (optional)" class="w-full bg-zinc-900/40 border border-zinc-800 p-3 text-sm outline-none" />
                     <div class="relative">
-                        <input id="auth-pass" type="password" placeholder="Create a password" class="w-full bg-zinc-900/40 border border-zinc-800 p-3 text-sm outline-none" />
+                        <input id="auth-pass" type="password" placeholder="Create password" class="w-full bg-zinc-900/40 border border-zinc-800 p-3 text-sm outline-none" />
                         <button id="toggle-pass" class="absolute right-2 top-2 text-xs text-zinc-400">Show</button>
                     </div>
-
-                    <div class="flex gap-2">
-                        <button id="register-btn" onclick="handleAuth(false)" class="flex-1 py-3 cinzel btn-primary rounded-md font-bold">Register & Enter</button>
-                        <button id="to-login-btn" onclick="setMode(true)" class="flex-1 py-3 border border-zinc-800 rounded-md">Already registered? Login</button>
-                    </div>
-
-                    <p id="reg-warning" class="text-red-400 text-[12px] font-medium">Please use your real name and school roll number. Duplicates are not allowed.</p>
+                    <button onclick="handleAuth()" class="w-full py-3 cinzel btn-primary rounded-md font-bold">Register & Enter</button>
+                    <p class="text-red-400 text-[10px] uppercase tracking-tighter text-center">Real name and roll number required.</p>
                 </div>
             </div>
 
             <div class="p-8 border border-zinc-800 rounded-md gold-glow bg-black/50 flex flex-col justify-between">
                 <div>
-                    <h3 class="cinzel text-xl text-white mb-3">Secure Access</h3>
-                    <div class="space-y-3">
+                    <h3 class="cinzel text-xl text-white mb-6 tracking-widest">Secure Login</h3>
+                    <div class="space-y-4">
                         <input id="login-name" type="text" placeholder="Full Name" class="w-full bg-zinc-900/40 border border-zinc-800 p-3 text-sm outline-none" />
                         <input id="login-pass" type="password" placeholder="Password" class="w-full bg-zinc-900/40 border border-zinc-800 p-3 text-sm outline-none" />
-                        <div class="flex gap-2">
-                            <button onclick="handleLogin()" class="flex-1 py-3 cinzel btn-primary rounded-md font-bold">Login</button>
-                            <button onclick="setMode(false)" class="flex-1 py-3 border border-zinc-800 rounded-md">Register</button>
-                        </div>
+                        <button onclick="handleLogin()" class="w-full py-3 cinzel btn-primary rounded-md font-bold">Login</button>
                     </div>
                 </div>
-                <p class="text-[10px] text-zinc-500 mt-6">By registering you agree to the community rules. Misuse may result in termination.</p>
             </div>
         </div>
     </div>
 
     <div id="welcome-overlay">
         <div class="max-w-lg text-center p-6 rounded-md gold-glow bg-black/60">
-            <div class="pyramid-anim" aria-hidden>
+            <div class="pyramid-anim">
                 <svg viewBox="0 0 200 150" class="mx-auto block">
                     <polygon class="layer l5" points="100,10 140,70 60,70" fill="#d4af37" opacity="0.95" />
                     <polygon class="layer l4" points="100,35 150,95 50,95" fill="#c59d2e" opacity="0.9" />
@@ -130,7 +122,7 @@
             <h2 id="welcome-title" class="cinzel text-2xl text-[#d4af37] mt-4">Welcome</h2>
             <p id="welcome-sub" class="text-sm text-zinc-400 mt-2">Initializing the hierarchy...</p>
             <div class="mt-4">
-                <button onclick="closeWelcome()" class="py-2 px-4 rounded-md bg-[#d4af37] text-black font-bold">Proceed</button>
+                <button onclick="closeWelcome()" class="py-2 px-10 rounded-md bg-[#d4af37] text-black font-bold cinzel tracking-widest">Proceed</button>
             </div>
         </div>
     </div>
@@ -138,7 +130,7 @@
     <div id="app-screen" class="hidden max-w-2xl mx-auto px-6 py-10 fade-in">
         <header class="flex justify-between items-end mb-12 border-b border-zinc-800 pb-6">
             <div>
-                <p class="text-[10px] text-zinc-500 tracking-widest uppercase mb-1">Current Subject</p>
+                <p class="text-[10px] text-zinc-500 tracking-widest uppercase mb-1">Subject Identity</p>
                 <h2 id="my-name-display" class="cinzel text-2xl text-white">---</h2>
                 <p id="my-title-display" class="text-[10px] text-[#d4af37] font-bold tracking-widest uppercase">Commoner</p>
             </div>
@@ -152,16 +144,15 @@
 
         <div class="mt-16 bg-[#0a0a0a] border border-zinc-900 rounded-sm overflow-hidden gold-glow">
             <div class="p-4 border-b border-zinc-900 bg-zinc-900/20 flex justify-between items-center">
-                <h3 class="cinzel text-xs tracking-[0.4em] text-[#d4af37]">Grand Hall Chat</h3>
-                <div id="typing-display" class="text-[9px] text-zinc-600 italic tracking-tighter"></div>
+                <h3 class="cinzel text-xs tracking-[0.4em] text-[#d4af37]">Grand Hall</h3>
+                <div id="typing-display" class="text-[9px] text-zinc-600 italic"></div>
             </div>
             <div id="chat-box" class="h-80 overflow-y-auto p-4 flex flex-col bg-black"></div>
             <div class="p-4 bg-black/50 border-t border-zinc-900 flex gap-2">
-                <input id="chat-input" onkeypress="if(event.key==='Enter') sendMessage()" placeholder="Whisper to the hierarchy..." class="flex-1 bg-transparent border border-zinc-800 p-3 text-xs text-white focus:border-[#d4af37] outline-none transition-all" />
+                <input id="chat-input" onkeypress="if(event.key==='Enter') sendMessage()" placeholder="Whisper..." class="flex-1 bg-transparent border border-zinc-800 p-3 text-xs text-white outline-none" />
                 <button onclick="sendMessage()" class="bg-[#d4af37] text-black px-6 text-[10px] font-bold cinzel">SEND</button>
             </div>
         </div>
-
         <button onclick="logout()" class="mt-10 text-[10px] text-zinc-600 uppercase tracking-widest hover:text-red-500">Terminate Session</button>
     </div>
 
@@ -174,115 +165,71 @@
             messagingSenderId: "302574478188",
             appId: "1:302574478188:web:aded8d66bdd1f828da8949"
         };
-
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        let loginMode = false; // true = login form active
-
-        function setMode(toLogin){
-            loginMode = toLogin;
-            document.getElementById('auth-screen').classList.remove('hidden');
-            // simply focus forms; UI already shows both panels
-        }
-
+        // Pass Toggle logic
         document.getElementById('toggle-pass').addEventListener('click', (e)=>{
-            e.preventDefault();
             const p = document.getElementById('auth-pass');
-            if(p.type === 'password'){ p.type = 'text'; e.target.innerText = 'Hide'; } else { p.type = 'password'; e.target.innerText = 'Show'; }
+            p.type = p.type === 'password' ? 'text' : 'password';
+            e.target.innerText = p.type === 'password' ? 'Show' : 'Hide';
         });
 
         async function hashPassword(pw){
-            if(!pw) return '';
             const enc = new TextEncoder();
             const buf = await crypto.subtle.digest('SHA-256', enc.encode(pw));
-            const hashArray = Array.from(new Uint8Array(buf));
-            const hashHex = hashArray.map(b=>b.toString(16).padStart(2,'0')).join('');
-            return hashHex;
+            return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
         }
 
-        async function handleAuth(isLoginTriggered){
-            // isLoginTriggered ignored; register path
+        async function handleAuth(){
             const name = document.getElementById('auth-name').value.trim();
-            const gender = document.getElementById('auth-gender').value;
             const roll = document.getElementById('auth-roll').value.trim();
             const cls = document.getElementById('auth-class').value.trim();
             const sec = document.getElementById('auth-sec').value.trim();
-            const email = document.getElementById('auth-email').value.trim();
             const pass = document.getElementById('auth-pass').value;
-
-            if(!name || !gender || !roll || !cls || !sec || !pass) return alert('Please complete all required fields.');
-
-            // Check if name already exists (doc id)
-            const userRef = db.collection('users').doc(name);
-            const doc = await userRef.get();
-            if(doc.exists) return alert('A user with this name already exists.');
-
-            // check roll uniqueness
-            const rollSnapshot = await db.collection('users').where('rollNumber', '==', roll).get();
-            if(!rollSnapshot.empty) return alert('This roll number has already been used.');
-
+            if(!name || !roll || !pass) return alert("Fill required fields");
+            
             const passHash = await hashPassword(pass);
-            const now = new Date();
-            await userRef.set({
-                name, gender, rollNumber: roll, class: cls, section: sec, email: email || '', passwordHash: passHash,
-                credits: 100000, title: 'Commoner', totalVotesReceived: 0, votesRemaining: 3, registeredAt: now.toISOString()
+            await db.collection('users').doc(name).set({
+                name, rollNumber: roll, class: cls, section: sec,
+                passwordHash: passHash, credits: 100000, title: 'Commoner', totalVotesReceived: 0
             });
-
-            // greet and enter
             localStorage.setItem('pyramidUser', name);
-            showWelcome(`${name}`, 'Welcome to the Pyramid — your hierarchy awaits');
-            loadHierarchy();
-            // show app
-            document.getElementById('auth-screen').classList.add('hidden');
-            document.getElementById('app-screen').classList.remove('hidden');
-            const myData = await db.collection('users').doc(name).get();
-            if(myData.exists){ document.getElementById('my-credits-display').innerText = myData.data().credits.toLocaleString(); document.getElementById('my-title-display').innerText = myData.data().title; document.getElementById('my-name-display').innerText = name; }
+            showWelcome(name, "Access Protocol Started");
+            enterApp(name);
         }
 
         async function handleLogin(){
             const name = document.getElementById('login-name').value.trim();
             const pass = document.getElementById('login-pass').value;
-            if(!name || !pass) return alert('Enter name and password.');
-            const docRef = db.collection('users').doc(name);
-            const doc = await docRef.get();
-            if(!doc.exists) return alert('Identity not found.');
+            const doc = await db.collection('users').doc(name).get();
+            if(!doc.exists) return alert("User not found");
             const passHash = await hashPassword(pass);
-            if(passHash !== doc.data().passwordHash) return alert('Incorrect password.');
+            if(passHash !== doc.data().passwordHash) return alert("Wrong password");
             localStorage.setItem('pyramidUser', name);
-            // show welcome
-            showWelcome(name, 'Welcome back — may your status rise');
-            // show app
+            showWelcome(name, "Welcome back");
+            enterApp(name);
+        }
+
+        function enterApp(name) {
             document.getElementById('auth-screen').classList.add('hidden');
             document.getElementById('app-screen').classList.remove('hidden');
             document.getElementById('my-name-display').innerText = name;
-            document.getElementById('my-credits-display').innerText = doc.data().credits.toLocaleString();
-            document.getElementById('my-title-display').innerText = doc.data().title;
             loadHierarchy();
             if (typeof initChat === "function") initChat();
         }
 
-        function showWelcome(name, subtitle){
+        function showWelcome(name, sub){
             document.getElementById('welcome-title').innerText = `Greetings, ${name}`;
-            document.getElementById('welcome-sub').innerText = subtitle;
-            const overlay = document.getElementById('welcome-overlay');
-            overlay.classList.add('show');
+            document.getElementById('welcome-sub').innerText = sub;
+            document.getElementById('welcome-overlay').classList.add('show');
         }
         function closeWelcome(){ document.getElementById('welcome-overlay').classList.remove('show'); }
-
         function logout(){ localStorage.removeItem('pyramidUser'); location.reload(); }
 
-        window.onload = async ()=>{
+        window.onload = async () => {
             const user = localStorage.getItem('pyramidUser');
-            if(user){
-                document.getElementById('auth-screen').classList.add('hidden');
-                document.getElementById('app-screen').classList.remove('hidden');
-                document.getElementById('my-name-display').innerText = user;
-                const myData = await db.collection('users').doc(user).get();
-                if(myData.exists){ document.getElementById('my-credits-display').innerText = myData.data().credits.toLocaleString(); document.getElementById('my-title-display').innerText = myData.data().title; }
-                loadHierarchy();
-                if (typeof initChat === "function") initChat();
-            }
+            if(user) enterApp(user);
         };
 
         async function loadHierarchy(){
@@ -293,19 +240,24 @@
             snapshot.forEach(doc => {
                 const data = doc.data();
                 const isMe = data.name === localStorage.getItem('pyramidUser');
-                const isTop = rank === 1;
+                const hasBounty = data.isBounty;
                 const card = document.createElement('div');
-                card.className = `user-card p-5 border ${isTop ? 'border-[#d4af37] bg-[#d4af37]/5' : 'border-zinc-900 bg-zinc-900/30'} flex justify-between items-center`;
-                if(isMe && data.name === 'Nihal Gupta') { card.ondblclick = ()=> openAdminPower(); }
+                
+                // BOUNTY CLASS ADDED HERE
+                card.className = `user-card p-5 border flex justify-between items-center transition-all ${hasBounty ? 'bounty-target' : (rank === 1 ? 'border-[#d4af37] bg-[#d4af37]/5' : 'border-zinc-900 bg-zinc-900/30')}`;
+                
                 card.innerHTML = `
                     <div class="flex items-center gap-4">
-                        <span class="cinzel text-xl ${isTop ? 'text-[#d4af37]' : 'text-zinc-700'}">#${rank}</span>
+                        <span class="cinzel text-xl ${rank === 1 ? 'text-[#d4af37]' : 'text-zinc-700'}">#${rank}</span>
                         <div>
                             <p class="font-bold ${isMe ? 'text-[#d4af37]' : 'text-white'}">${data.name}</p>
-                            <p class="text-[9px] tracking-widest uppercase text-zinc-500">${isTop ? '👑 Popularity King' : data.title}</p>
+                            <p class="text-[9px] tracking-widest uppercase text-zinc-500">${data.title}</p>
                         </div>
                     </div>
-                    <button onclick="voteFor('${data.name}')" class="text-[9px] tracking-widest border border-zinc-700 px-4 py-2 hover:border-[#d4af37] transition-all">VOTE</button>
+                    <div class="flex gap-2">
+                        <button onclick="voteFor('${data.name}')" class="text-[9px] border border-zinc-700 px-4 py-2 hover:border-[#d4af37]">VOTE</button>
+                        <button onclick="placeBounty('${data.name}')" class="text-[9px] border border-red-900 px-4 py-2 text-red-500 hover:bg-red-950">BOUNTY</button>
+                    </div>
                 `;
                 list.appendChild(card);
                 rank++;
@@ -313,18 +265,12 @@
         }
 
         async function voteFor(name){
-            const me = localStorage.getItem('pyramidUser');
-            if(me === name) return alert('Self-voting is prohibited.');
+            if(localStorage.getItem('pyramidUser') === name) return alert("No self-voting");
             await db.collection('users').doc(name).update({ totalVotesReceived: firebase.firestore.FieldValue.increment(1) });
-            alert('Vote recorded.');
             loadHierarchy();
         }
     </script>
-    <script src="js/admin.js"></script>
     <script src="js/chat.js"></script>
-    <script src="js/auth.js"></script>
-    <script src="js/voting.js"></script>
-    <script src="js/economy.js"></script>
     <script src="js/bounty.js"></script>
 </body>
 </html>
