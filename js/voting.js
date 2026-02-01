@@ -242,8 +242,11 @@ function createHierarchyCard(username, userData, rank) {
   const hasBounty = userData.isBounty || false;
 
   const card = document.createElement('div');
-  card.className = `user-rank-card glass-card p-5 rounded-xl flex justify-between items-center transition-all ${
-    hasBounty
+  // Add 'user-rank-card' so the gift script can find it
+card.className = `user-rank-card p-4 border flex justify-between items-center ${hasBounty ? 'bounty-target' : 'border-zinc-900 bg-zinc-900/20'}`;
+card.setAttribute('data-user-name', data.name); // Required for the gift script to know who gets the gift
+  hasBounty
+  hasBounty
       ? 'bounty-target'
       : isTopRank
         ? 'rank-1'
