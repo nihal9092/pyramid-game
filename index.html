@@ -437,20 +437,37 @@
 </div>
 
 <!-- Bridge: auth.js removes .hidden → we add .visible so #app-screen displays -->
-<script>
-(function(){
-  var el = document.getElementById('app-screen');
-  if (!el) return;
-  if (!el.classList.contains('hidden')) el.classList.add('visible');
-  new MutationObserver(function(mutations){
-    mutations.forEach(function(m){
-      if (m.attributeName === 'class' && !el.classList.contains('hidden')) {
-        el.classList.add('visible');
-      }
-    });
-  }).observe(el, { attributes: true });
+/* --- The Synchronization Fix --- */
+(function() {
+  const appScreen = document.getElementById('app-screen');
+  const authScreen = document.getElementById('auth-screen');
+  const adminFab = document.getElementById('admin-fab');
+
+  // This listener waits for your auth.js to verify a user
+  firebase.auth().onAuthStateChanged((user) => {
+    if (user) {
+      // 1. Swap Screens
+      authScreen.classList.add('hidden');
+      appScreen.classList.remove('hidden');
+      appScreen.classList.add('visible');
+
+      // 2. Check for Admin Privileges
+      // Assumes your Firestore 'users' collection has an 'isAdmin' boolean
+      db.collection('users').doc(user.uid).get().then((doc) => {
+        if (doc.exists && doc.data().isAdmin) {
+          adminFab.classList.remove('hidden');
+        }
+      });
+      
+      console.log("Hierarchy System: Online");
+    } else {
+      // Reset to Login if logged out
+      authScreen.classList.remove('hidden');
+      appScreen.classList.add('hidden');
+      adminFab.classList.add('hidden');
+    }
+  });
 })();
-</script>
 
 <!-- Scripts -->
 <script src="auth.js"></script>
