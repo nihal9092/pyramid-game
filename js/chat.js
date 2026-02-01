@@ -1,14 +1,7 @@
 /**
  * chat.js - Enhanced Chat & Gift System
- * 
- * Features:
- * - Real-time messaging with proper event handling
- * - Title badges in chat messages
- * - Gift sending with visual effects
- * - Typing indicators
- * - Message animations
- * 
- * @version 3.0.0
+ * SIMPLIFIED AND BULLETPROOF VERSION
+ * @version 3.1.0
  */
 
 'use strict';
@@ -33,7 +26,6 @@ const GIFT_CATALOG = {
   'Bag of Cash': { icon: '💰', price: 500000, tier: 'mythic' }
 };
 
-// Title tier colors
 const TITLE_COLORS = {
   'Tycoon': 'bg-gradient-to-r from-yellow-400 to-orange-500',
   'Magnate': 'bg-gradient-to-r from-yellow-400 to-orange-500',
@@ -53,7 +45,7 @@ const CHAT_CONFIG = {
 };
 
 // ============================================
-// STATE MANAGEMENT
+// STATE - SIMPLIFIED
 // ============================================
 
 const ChatState = {
@@ -66,86 +58,49 @@ const ChatState = {
 };
 
 // ============================================
-// INITIALIZATION
+// INITIALIZATION - SIMPLIFIED
 // ============================================
 
-async function initChat() {
+function initChat() {
+  console.log('💬 Starting chat initialization...');
+  
   if (ChatState.isInitialized) {
-    console.warn('Chat already initialized');
+    console.log('⚠️ Chat already initialized');
     return;
   }
   
-  if (typeof db === 'undefined') {
-    console.error('Firebase not initialized');
-    return;
-  }
-  
-  // FIXED: Get current user from localStorage and verify it exists
+  // Get current user - SIMPLE METHOD
   const storedUser = localStorage.getItem('pyramidUser');
   if (!storedUser) {
-    console.warn('No user logged in');
+    console.error('❌ No user in localStorage');
     return;
   }
   
-  // FIXED: Verify user exists in database before initializing chat
-  try {
-    const userDoc = await db.collection('users').doc(storedUser).get();
-    if (!userDoc.exists) {
-      console.error('User not found in database');
-      localStorage.removeItem('pyramidUser');
-      return;
-    }
-    
-    ChatState.currentUser = storedUser;
-    console.log('Chat initialized for user:', storedUser);
-  } catch (error) {
-    console.error('Failed to verify user:', error);
-    return;
-  }
+  ChatState.currentUser = storedUser;
+  console.log('✅ Chat user set:', storedUser);
   
-  try {
-    await Promise.all([
-      initializeMessageListener(),
-      initializeInputHandlers(),
-      initializeTypingIndicator()
-    ]);
-    
-    ChatState.isInitialized = true;
-    console.log('✅ Chat system initialized');
-    
-  } catch (error) {
-    console.error('Chat initialization failed:', error);
-  }
-}
-
-function cleanupChat() {
-  ChatState.unsubscribers.forEach(unsubscribe => {
-    try {
-      unsubscribe();
-    } catch (error) {
-      console.error('Unsubscribe error:', error);
-    }
-  });
+  // Setup everything
+  setupMessageListener();
+  setupInputHandlers();
+  setupTypingIndicator();
   
-  if (ChatState.messagesListener) {
-    ChatState.messagesListener();
-  }
-  
-  ChatState.unsubscribers = [];
-  ChatState.isInitialized = false;
-  
-  console.log('Chat cleaned up');
+  ChatState.isInitialized = true;
+  console.log('✅✅✅ CHAT FULLY INITIALIZED ✅✅✅');
 }
 
 // ============================================
 // MESSAGE LISTENER
 // ============================================
 
-function initializeMessageListener() {
+function setupMessageListener() {
   const chatBox = document.getElementById('chat-box');
-  if (!chatBox) return;
+  if (!chatBox) {
+    console.error('❌ chat-box element not found');
+    return;
+  }
 
-  // Listen to messages in real-time
+  console.log('📨 Setting up message listener...');
+  
   const unsubscribe = db.collection('messages')
     .orderBy('time', 'desc')
     .limit(CHAT_CONFIG.maxMessagesDisplay)
@@ -158,33 +113,29 @@ function initializeMessageListener() {
           messages.push({ id: doc.id, ...doc.data() });
         });
         
-        // Reverse to show oldest first
         messages.reverse().forEach(msg => {
           const messageEl = createMessageElement(msg);
           chatBox.appendChild(messageEl);
         });
         
-        // Auto scroll to bottom
         chatBox.scrollTop = chatBox.scrollHeight;
+        console.log('📨 Messages updated:', messages.length);
       },
       (error) => {
-        console.error('Message listener error:', error);
+        console.error('❌ Message listener error:', error);
         chatBox.innerHTML = '<div class="text-center text-red-500 py-4">Failed to load messages</div>';
       }
     );
 
   ChatState.messagesListener = unsubscribe;
   ChatState.unsubscribers.push(unsubscribe);
+  console.log('✅ Message listener active');
 }
 
-/**
- * Create message element with enhanced styling
- */
 function createMessageElement(message) {
   const messageDiv = document.createElement('div');
   const currentUser = ChatState.currentUser;
   
-  // Message type handling
   if (message.type === 'GIFT') {
     return createGiftMessage(message);
   }
@@ -193,11 +144,9 @@ function createMessageElement(message) {
     return createSystemMessage(message);
   }
   
-  // Regular message
   const isOwn = message.user === currentUser;
   messageDiv.className = `chat-message ${isOwn ? 'own' : 'other'}`;
   
-  // Message header with title badge
   const header = document.createElement('div');
   header.className = 'flex items-center gap-2 mb-1';
   
@@ -205,7 +154,6 @@ function createMessageElement(message) {
   userName.className = `font-semibold text-sm ${isOwn ? 'text-purple-300' : 'text-white'}`;
   userName.textContent = message.user;
   
-  // Add title badge
   const titleBadge = document.createElement('span');
   const userTitle = message.title || 'Commoner';
   const titleColor = TITLE_COLORS[userTitle] || TITLE_COLORS['Commoner'];
@@ -220,7 +168,6 @@ function createMessageElement(message) {
   header.appendChild(titleBadge);
   header.appendChild(timestamp);
   
-  // Message content
   const content = document.createElement('div');
   content.className = 'text-sm text-white break-words';
   content.textContent = message.text;
@@ -231,9 +178,6 @@ function createMessageElement(message) {
   return messageDiv;
 }
 
-/**
- * Create system message element
- */
 function createSystemMessage(message) {
   const messageDiv = document.createElement('div');
   messageDiv.className = 'chat-message system';
@@ -252,9 +196,6 @@ function createSystemMessage(message) {
   return messageDiv;
 }
 
-/**
- * Create gift message element
- */
 function createGiftMessage(message) {
   const messageDiv = document.createElement('div');
   messageDiv.className = 'chat-message gift';
@@ -285,9 +226,6 @@ function createGiftMessage(message) {
   return messageDiv;
 }
 
-/**
- * Format timestamp
- */
 function formatTime(timestamp) {
   if (!timestamp) return '';
   
@@ -307,9 +245,6 @@ function formatTime(timestamp) {
   }
 }
 
-/**
- * Sanitize text to prevent XSS
- */
 function sanitizeText(text) {
   if (!text || typeof text !== 'string') return '';
   const div = document.createElement('div');
@@ -321,19 +256,19 @@ function sanitizeText(text) {
 // INPUT HANDLERS
 // ============================================
 
-function initializeInputHandlers() {
+function setupInputHandlers() {
   const chatInput = document.getElementById('chat-input');
   const sendButton = document.getElementById('send-chat');
   
   if (!chatInput || !sendButton) {
-    console.warn('Chat UI elements not found');
+    console.error('❌ Chat input elements not found');
     return;
   }
   
-  // Send button click
+  console.log('⌨️ Setting up input handlers...');
+  
   sendButton.addEventListener('click', handleSendMessage);
   
-  // Enter key to send
   chatInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -341,66 +276,63 @@ function initializeInputHandlers() {
     }
   });
   
-  // Typing indicator
   chatInput.addEventListener('input', () => {
     updateTypingStatus(true);
-    
     clearTimeout(ChatState.typingTimer);
     ChatState.typingTimer = setTimeout(() => {
       updateTypingStatus(false);
     }, CHAT_CONFIG.typingTimeout);
   });
   
-  console.log('✅ Input handlers initialized');
+  console.log('✅ Input handlers ready');
 }
 
-/**
- * Handle sending a message
- */
-async function handleSendMessage() {
+function handleSendMessage() {
   const input = document.getElementById('chat-input');
   if (!input) return;
   
   const text = input.value.trim();
   
-  if (!text) return;
+  if (!text) {
+    console.log('⚠️ Empty message, ignoring');
+    return;
+  }
   
   if (text.length > CHAT_CONFIG.maxMessageLength) {
     showError(`Message too long. Maximum ${CHAT_CONFIG.maxMessageLength} characters.`);
     return;
   }
   
-  // FIXED: Check if user is properly initialized
   if (!ChatState.currentUser) {
+    console.error('❌ No current user!');
     showError('Please log in to send messages');
     return;
   }
   
-  // Rate limiting
   const now = Date.now();
   if (now - ChatState.lastMessageTime < CHAT_CONFIG.messageRateLimit) {
     showError('Please wait a moment before sending another message.');
     return;
   }
   
-  try {
-    await sendMessage(text);
-    input.value = '';
-    ChatState.lastMessageTime = now;
-    updateTypingStatus(false);
-  } catch (error) {
-    console.error('Send message error:', error);
-    showError(error.message || 'Failed to send message');
-  }
+  console.log('📤 Sending message:', text);
+  
+  sendMessage(text)
+    .then(() => {
+      console.log('✅ Message sent successfully');
+      input.value = '';
+      ChatState.lastMessageTime = now;
+      updateTypingStatus(false);
+    })
+    .catch(error => {
+      console.error('❌ Send error:', error);
+      showError(error.message || 'Failed to send message');
+    });
 }
 
-/**
- * Send a message to Firestore
- */
 async function sendMessage(text) {
-  // FIXED: Better validation of current user
   if (!ChatState.currentUser) {
-    throw new Error('Not authenticated. Please log in.');
+    throw new Error('Not authenticated');
   }
   
   if (!text || text.trim().length === 0) {
@@ -410,12 +342,7 @@ async function sendMessage(text) {
   try {
     // Get user's title
     const userDoc = await db.collection('users').doc(ChatState.currentUser).get();
-    
-    if (!userDoc.exists) {
-      throw new Error('User not found. Please log in again.');
-    }
-    
-    const userTitle = userDoc.data().title || 'Commoner';
+    const userTitle = userDoc.exists ? (userDoc.data().title || 'Commoner') : 'Commoner';
     
     await db.collection('messages').add({
       user: ChatState.currentUser,
@@ -425,9 +352,9 @@ async function sendMessage(text) {
       time: Date.now()
     });
     
-    console.log('Message sent:', text);
+    console.log('✅ Message added to Firestore');
   } catch (error) {
-    console.error('Failed to send message:', error);
+    console.error('❌ Firestore error:', error);
     throw error;
   }
 }
@@ -436,10 +363,11 @@ async function sendMessage(text) {
 // TYPING INDICATOR
 // ============================================
 
-function initializeTypingIndicator() {
+function setupTypingIndicator() {
   if (!ChatState.currentUser) return;
   
-  // Listen for typing status from other users
+  console.log('⌨️ Setting up typing indicator...');
+  
   const unsubscribe = db.collection('status')
     .onSnapshot((snapshot) => {
       const typingUsers = [];
@@ -460,6 +388,7 @@ function initializeTypingIndicator() {
     });
   
   ChatState.unsubscribers.push(unsubscribe);
+  console.log('✅ Typing indicator active');
 }
 
 function updateTypingStatus(isTyping) {
@@ -472,7 +401,7 @@ function updateTypingStatus(isTyping) {
       timestamp: firebase.firestore.FieldValue.serverTimestamp()
     }, { merge: true })
     .catch(error => {
-      console.error('Update typing status error:', error);
+      console.error('Typing status error:', error);
     });
 }
 
@@ -491,93 +420,88 @@ function updateTypingDisplay(users) {
 }
 
 // ============================================
-// GIFT SYSTEM
+// GIFT SYSTEM - SIMPLIFIED
 // ============================================
 
-/**
- * Open gift modal for a user
- */
 function openGiftModal(targetUser) {
-  console.log('🎁 openGiftModal called with target:', targetUser);
+  console.log('🎁🎁🎁 OPEN GIFT MODAL CALLED 🎁🎁🎁');
+  console.log('🎁 Target user:', targetUser);
   console.log('🎁 Current user:', ChatState.currentUser);
   
-  // FIXED: Better validation
   if (!ChatState.currentUser) {
-    console.error('❌ No current user found');
+    console.error('❌ No current user');
     showError('You must be logged in to send gifts');
     return;
   }
   
   if (!targetUser) {
-    console.error('❌ No target user provided');
+    console.error('❌ No target user');
     showError('Invalid recipient');
     return;
   }
   
   if (targetUser === ChatState.currentUser) {
-    console.error('❌ Cannot send gift to self');
+    console.error('❌ Cannot send to self');
     showError('You cannot send gifts to yourself');
     return;
   }
   
-  console.log('✅ All validations passed, creating gift modal...');
+  console.log('✅ Creating gift modal...');
   createGiftModal(targetUser);
 }
 
-/**
- * Create gift selection modal
- */
 function createGiftModal(targetUser) {
-  console.log('🎁 Creating gift modal for:', targetUser);
+  console.log('🎨 Building modal DOM...');
   
-  // Remove existing modal if any
+  // Remove any existing modal
   const existing = document.getElementById('gift-modal-overlay');
   if (existing) {
-    console.log('🎁 Removing existing modal');
+    console.log('🗑️ Removing existing modal');
     existing.remove();
   }
   
+  // Create overlay
   const overlay = document.createElement('div');
   overlay.id = 'gift-modal-overlay';
   overlay.className = 'fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[10000] p-4';
+  overlay.style.display = 'flex';
   overlay.onclick = (e) => {
-    if (e.target === overlay) closeGiftModal();
+    if (e.target === overlay) {
+      console.log('🚪 Closing modal (clicked overlay)');
+      closeGiftModal();
+    }
   };
   
-  console.log('🎁 Created overlay element');
-  
+  // Create modal
   const modal = document.createElement('div');
   modal.className = 'glass-card max-w-4xl w-full max-h-[90vh] overflow-y-auto p-6 rounded-3xl';
   modal.onclick = (e) => e.stopPropagation();
   
-  console.log('🎁 Created modal element');
-  
   // Header
-  const header = document.createElement('div');
-  header.className = 'mb-6';
+  const headerDiv = document.createElement('div');
+  headerDiv.className = 'mb-6 flex justify-between items-center';
   
-  const headerContent = document.createElement('div');
-  headerContent.className = 'flex justify-between items-center';
-  
-  const titleSection = document.createElement('div');
-  titleSection.innerHTML = `
+  const titleDiv = document.createElement('div');
+  titleDiv.innerHTML = `
     <h2 class="cinzel text-2xl gradient-text font-bold">Send a Gift</h2>
     <p class="text-sm text-zinc-400 mt-1">To: <span class="font-bold text-white">${sanitizeText(targetUser)}</span></p>
   `;
   
-  const closeButton = document.createElement('button');
-  closeButton.className = 'text-3xl text-zinc-400 hover:text-white transition-colors';
-  closeButton.textContent = '×';
-  closeButton.onclick = closeGiftModal;
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'text-3xl text-zinc-400 hover:text-white transition-colors';
+  closeBtn.textContent = '×';
+  closeBtn.onclick = () => {
+    console.log('🚪 Closing modal (clicked X)');
+    closeGiftModal();
+  };
   
-  headerContent.appendChild(titleSection);
-  headerContent.appendChild(closeButton);
-  header.appendChild(headerContent);
-  modal.appendChild(header);
+  headerDiv.appendChild(titleDiv);
+  headerDiv.appendChild(closeBtn);
+  modal.appendChild(headerDiv);
   
   // Gift grid
   const grid = document.createElement('div');
-  grid.className = 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6';
+  grid.className = 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4';
   
   Object.entries(GIFT_CATALOG).forEach(([giftName, giftData]) => {
     const card = createGiftCard(giftName, giftData, targetUser);
@@ -585,17 +509,16 @@ function createGiftModal(targetUser) {
   });
   
   modal.appendChild(grid);
-  
   overlay.appendChild(modal);
+  
+  // Add to page
   document.body.appendChild(overlay);
   
-  console.log('🎁 Gift modal added to DOM');
-  console.log('🎁 Modal element:', overlay);
+  console.log('✅✅✅ MODAL ADDED TO PAGE ✅✅✅');
+  console.log('Modal element:', overlay);
+  console.log('Modal visible:', overlay.style.display);
 }
 
-/**
- * Create gift card element
- */
 function createGiftCard(giftName, giftData, targetUser) {
   const card = document.createElement('button');
   card.className = 'glass-card p-4 rounded-2xl hover:border-[#FFD700] transition-all flex flex-col items-center gap-2 group';
@@ -613,8 +536,6 @@ function createGiftCard(giftName, giftData, targetUser) {
   price.textContent = `${giftData.price.toLocaleString()} CR`;
   
   const tier = document.createElement('div');
-  tier.className = 'text-[10px] uppercase tracking-wider font-bold';
-  
   const tierColors = {
     common: 'text-gray-400',
     uncommon: 'text-green-400',
@@ -623,7 +544,7 @@ function createGiftCard(giftName, giftData, targetUser) {
     legendary: 'text-yellow-400',
     mythic: 'text-red-400'
   };
-  tier.className += ' ' + (tierColors[giftData.tier] || tierColors.common);
+  tier.className = `text-[10px] uppercase tracking-wider font-bold ${tierColors[giftData.tier] || tierColors.common}`;
   tier.textContent = giftData.tier;
   
   card.appendChild(icon);
@@ -631,35 +552,38 @@ function createGiftCard(giftName, giftData, targetUser) {
   card.appendChild(price);
   card.appendChild(tier);
   
-  card.onclick = () => confirmAndSendGift(ChatState.currentUser, targetUser, giftName, giftData.price);
+  card.onclick = () => {
+    console.log('🎁 Gift selected:', giftName);
+    confirmAndSendGift(ChatState.currentUser, targetUser, giftName, giftData.price);
+  };
   
   return card;
 }
 
-/**
- * Confirm and send gift
- */
 async function confirmAndSendGift(sender, recipient, giftName, price) {
   const confirmed = confirm(
     `Send ${giftName} (${price.toLocaleString()} CR) to ${recipient}?\n\nThis cannot be undone.`
   );
   
-  if (!confirmed) return;
+  if (!confirmed) {
+    console.log('❌ Gift cancelled by user');
+    return;
+  }
   
   closeGiftModal();
   
+  console.log('💸 Processing gift transaction...');
+  
   try {
     await executeGiftTransaction(sender, recipient, giftName, price);
+    console.log('✅ Gift sent successfully!');
     showSuccess(`Gift sent successfully!`);
   } catch (error) {
-    console.error('Gift error:', error);
+    console.error('❌ Gift error:', error);
     showError(error.message || 'Failed to send gift');
   }
 }
 
-/**
- * Execute gift transaction
- */
 async function executeGiftTransaction(sender, recipient, giftName, price) {
   const senderRef = db.collection('users').doc(sender);
   const recipientRef = db.collection('users').doc(recipient);
@@ -697,11 +621,16 @@ async function executeGiftTransaction(sender, recipient, giftName, price) {
     type: 'GIFT',
     time: Date.now()
   });
+  
+  console.log('✅ Gift transaction complete');
 }
 
 function closeGiftModal() {
   const overlay = document.getElementById('gift-modal-overlay');
-  if (overlay) overlay.remove();
+  if (overlay) {
+    overlay.remove();
+    console.log('✅ Modal closed and removed');
+  }
 }
 
 // ============================================
@@ -724,7 +653,6 @@ function showError(message) {
     notification.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
     notification.style.opacity = '0';
     notification.style.transform = 'translateX(400px)';
-    
     setTimeout(() => notification.remove(), 300);
   }, 3000);
 }
@@ -739,46 +667,4 @@ function showSuccess(message) {
     </div>
   `;
   
-  document.body.appendChild(notification);
-  
-  setTimeout(() => {
-    notification.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
-    notification.style.opacity = '0';
-    notification.style.transform = 'translateX(400px)';
-    
-    setTimeout(() => notification.remove(), 300);
-  }, 3000);
-}
-
-// ============================================
-// INITIALIZATION
-// ============================================
-
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => {
-    initChat().catch(error => {
-      console.error('Chat init failed:', error);
-    });
-  });
-} else {
-  initChat().catch(error => {
-    console.error('Chat init failed:', error);
-  });
-}
-
-window.addEventListener('beforeunload', cleanupChat);
-
-// Export functions
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = {
-    initChat,
-    cleanupChat,
-    sendMessage,
-    openGiftModal
-  };
-}
-
-// Make functions globally accessible
-window.openGiftModal = openGiftModal;
-window.closeGiftModal = closeGiftModal;
-window.sendMessage = sendMessage;
+  document.body.appendChild(notification)
