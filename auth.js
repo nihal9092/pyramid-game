@@ -401,7 +401,7 @@ async function enterApplication() {
     const appScreen = document.getElementById('app-screen');
 
     if (authScreen) authScreen.classList.add('hidden');
-    if (appScreen) appScreen.classList.add('visible');
+    if (appScreen) appScreen.classList.remove('hidden');
 
     // Load user data
     const userRef = db.collection('users').doc(AuthState.currentUser);
@@ -629,3 +629,4 @@ window.handleLogout = handleLogout;
 window.getCurrentUser = getCurrentUser;
 window.isAuthenticated = isAuthenticated;
 window.closeWelcome = closeWelcome;
+    
