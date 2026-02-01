@@ -271,9 +271,11 @@ function sanitizeText(text) {
 // ============================================
 
 function setupInputHandlers() {
-  const chatInput = document.getElementById('chat-input');
-  const sendButton = document.getElementById('send-chat');
-  
+  sendButton chatInput = document.getElementById('chat-input');
+  const sendBtn = document.getElementById('send-chat'); // Matches your index.html ID
+if (sendBtn) {
+    sendBtn.onclick = sendMessage;
+}
   if (!chatInput || !sendButton) {
     console.error('❌ Chat input elements not found');
     return;
