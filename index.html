@@ -543,7 +543,6 @@
         <button id="register-btn" class="w-full btn-primary cinzel relative z-10">
           Enter The Pyramid
         </button>
-
         <p class="text-rose-400 text-xs font-medium mt-2 flex items-center gap-2">
           <span>⚠</span>
           <span>Use your real name and roll number. Duplicates blocked.</span>
@@ -600,8 +599,15 @@
         placeholder="Type your message..."
         class="flex-1 bg-black/40 border border-zinc-700 p-3 rounded-xl focus:border-[#FFD700] transition-all"
       />
-      <button id="send-chat" class="btn-primary">Send</button>
-    </div>
+      <button id="send-chat" onclick="sendMessage()" class="btn-primary">Send</button>
+
+<input
+    id="chat-input"
+    type="text"
+    onkeypress="if(event.key==='Enter') sendMessage()"
+    placeholder="Type your message..."
+    class="flex-1 bg-black/40 border border-zinc-700 p-3 rounded-xl focus:border-[#FFD700] transition-all"
+/> </div>
   </div>
 </div>
 
@@ -612,7 +618,4 @@
 <script src="chat.js"></script>
 <!-- Add any necessary Firebase initialization scripts below -->
 
-Download
-Plain text
-Copy
-</body> </html>
+<body> <html>
