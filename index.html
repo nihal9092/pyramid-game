@@ -437,37 +437,34 @@
 </div>
 
 <!-- Bridge: auth.js removes .hidden → we add .visible so #app-screen displays -->
-/* --- The Synchronization Fix --- */
-(function() {
-  const appScreen = document.getElementById('app-screen');
-  const authScreen = document.getElementById('auth-screen');
-  const adminFab = document.getElementById('admin-fab');
+  /* --- GLOBAL BOOTLOADER --- */
+document.addEventListener('DOMContentLoaded', () => {
+    const authScreen = document.getElementById('auth-screen');
+    const appScreen = document.getElementById('app-screen');
 
-  // This listener waits for your auth.js to verify a user
-  firebase.auth().onAuthStateChanged((user) => {
-    if (user) {
-      // 1. Swap Screens
-      authScreen.classList.add('hidden');
-      appScreen.classList.remove('hidden');
-      appScreen.classList.add('visible');
+    // Listen for the 'authReady' event from our fixed auth.js
+    window.addEventListener('authSuccess', (e) => {
+        const user = e.detail.user;
+        
+        // 1. Switch Screens
+        authScreen.style.display = 'none';
+        appScreen.style.display = 'block';
+        appScreen.classList.remove('hidden');
+        appScreen.classList.add('visible');
 
-      // 2. Check for Admin Privileges
-      // Assumes your Firestore 'users' collection has an 'isAdmin' boolean
-      db.collection('users').doc(user.uid).get().then((doc) => {
-        if (doc.exists && doc.data().isAdmin) {
-          adminFab.classList.remove('hidden');
-        }
-      });
-      
-      console.log("Hierarchy System: Online");
-    } else {
-      // Reset to Login if logged out
-      authScreen.classList.remove('hidden');
-      appScreen.classList.add('hidden');
-      adminFab.classList.add('hidden');
-    }
-  });
-})();
+        // 2. Initialize Sub-Systems (Retaining all features)
+        if (typeof initEconomy === 'function') initEconomy(user);
+        if (typeof initChat === 'function') initChat(user);
+        if (typeof initBounty === 'function') initBounty(user);
+        
+        // 3. Admin Check
+        db.collection('users').doc(user.uid).get().then(doc => {
+            if (doc.exists && doc.data().role === 'admin') {
+                document.getElementById('admin-fab').style.display = 'flex';
+            }
+        });
+    });
+});
 
 <!-- Scripts -->
 <script src="auth.js"></script>
