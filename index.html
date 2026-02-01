@@ -437,8 +437,7 @@
 </div>
 
 <!-- Bridge: auth.js removes .hidden → we add .visible so #app-screen displays -->
-  /* --- GLOBAL BOOTLOADER --- */
-document.addEventListener('DOMContentLoaded', () => {
+<script> document.addEventListener('DOMContentLoaded', () => {
     const authScreen = document.getElementById('auth-screen');
     const appScreen = document.getElementById('app-screen');
 
@@ -465,6 +464,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 });
+  <script>
 
 <!-- Scripts -->
 <script src="auth.js"></script>
