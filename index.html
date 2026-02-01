@@ -27,7 +27,20 @@
   .cinzel {
     font-family: "Cinzel", serif;
   }
+const sounds = {
+    common: new Audio("https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3"),
+    rare: new Audio("https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3"),
+    epic: new Audio("https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3"),
+    legendary: new Audio("https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3"),
+    mythic: new Audio("https://assets.mixkit.co/active_storage/sfx/2567/2567-preview.mp3"),
+    admin: new Audio("https://assets.mixkit.co/active_storage/sfx/951/951-preview.mp3")
+};
 
+function playSfx(tier) {
+    const sfx = sounds[tier] || sounds.common;
+    sfx.currentTime = 0;
+    sfx.play().catch(() => console.log("Sound blocked by browser interaction policy"));
+      }
   /* Animated Background */
   .bg-animate {
     position: fixed;
