@@ -1,15 +1,14 @@
 /**
- * auth.js - Authentication & User Management
+ * auth.js - Authentication & User Management with Referral System
  * 
  * Features:
  * - Secure user registration
  * - Login/logout functionality
+ * - Referral system (25K for new user, 50K for referrer)
  * - Session management
  * - Password hashing
- * - Input validation
- * - Duplicate prevention
  * 
- * @version 2.0.0
+ * @version 4.0.0
  */
 
 'use strict';
@@ -24,7 +23,9 @@ const AUTH_CONFIG = {
   sessionKey: 'pyramidUser',
   defaultCredits: 100000,
   defaultVotes: 3,
-  defaultTitle: 'Commoner'
+  defaultTitle: 'Commoner',
+  referralBonusNew: 25000,      // New user gets 25K
+  referralBonusReferrer: 50000   // Referrer gets 50K
 };
 
 // ============================================
@@ -41,40 +42,30 @@ const AuthState = {
 // INITIALIZATION
 // ============================================
 
-/**
- * Initialize authentication system
- */
 function initAuth() {
   setupPasswordToggle();
   setupEventListeners();
   checkExistingSession();
   
-  console.log('Authentication system initialized');
+  console.log('✅ Authentication system initialized with referral system');
 }
 
-/**
- * Setup event listeners for auth forms
- */
 function setupEventListeners() {
-  // Register button
   const registerBtn = document.getElementById('register-btn');
   if (registerBtn) {
     registerBtn.addEventListener('click', handleRegister);
   }
 
-  // Login button
   const loginBtn = document.getElementById('login-btn');
   if (loginBtn) {
     loginBtn.addEventListener('click', handleLogin);
   }
 
-  // Logout button
   const logoutBtn = document.getElementById('logout-btn');
   if (logoutBtn) {
     logoutBtn.addEventListener('click', handleLogout);
   }
 
-  // Enter key handling
   const loginPassInput = document.getElementById('login-pass');
   if (loginPassInput) {
     loginPassInput.addEventListener('keypress', (e) => {
@@ -94,9 +85,6 @@ function setupEventListeners() {
   }
 }
 
-/**
- * Setup password visibility toggle
- */
 function setupPasswordToggle() {
   const toggleBtn = document.getElementById('toggle-pass');
   const passwordInput = document.getElementById('auth-pass');
@@ -116,16 +104,12 @@ function setupPasswordToggle() {
   }
 }
 
-/**
- * Check for existing session on page load
- */
 async function checkExistingSession() {
   const savedUser = localStorage.getItem(AUTH_CONFIG.sessionKey);
   
   if (!savedUser) return;
 
   try {
-    // Verify user still exists in database
     const userDoc = await db.collection('users').doc(savedUser).get();
     
     if (userDoc.exists) {
@@ -133,11 +117,9 @@ async function checkExistingSession() {
       AuthState.isAuthenticated = true;
       AuthState.userCache = userDoc.data();
       
-      // Show welcome and enter app
       showWelcome(savedUser, 'Welcome back');
       await enterApplication();
     } else {
-      // User deleted, clear session
       clearSession();
     }
   } catch (error) {
@@ -147,15 +129,11 @@ async function checkExistingSession() {
 }
 
 // ============================================
-// REGISTRATION
+// REGISTRATION WITH REFERRAL
 // ============================================
 
-/**
- * Handle user registration
- */
 async function handleRegister() {
   try {
-    // Get form values
     const name = getInputValue('auth-name');
     const gender = getInputValue('auth-gender');
     const roll = getInputValue('auth-roll');
@@ -163,14 +141,13 @@ async function handleRegister() {
     const sec = getInputValue('auth-sec').toUpperCase();
     const email = getInputValue('auth-email');
     const password = getInputValue('auth-pass');
+    const referredBy = getInputValue('auth-referral'); // Optional referral code
 
-    // Validate required fields
     if (!name || !gender || !roll || !cls || !sec || !password) {
       showAuthError('Please complete all required fields.');
       return;
     }
 
-    // Validate password
     if (password.length < AUTH_CONFIG.minPasswordLength) {
       showAuthError(`Password must be at least ${AUTH_CONFIG.minPasswordLength} characters long.`);
       return;
@@ -181,13 +158,11 @@ async function handleRegister() {
       return;
     }
 
-    // Validate email format if provided
     if (email && !isValidEmail(email)) {
       showAuthError('Please enter a valid email address.');
       return;
     }
 
-    // Validate name format
     if (!isValidName(name)) {
       showAuthError('Please enter a valid full name (letters and spaces only).');
       return;
@@ -212,8 +187,24 @@ async function handleRegister() {
       return;
     }
 
-    // Hash password
     const passwordHash = await hashPassword(password);
+
+    // Calculate credits with referral bonus
+    let initialCredits = AUTH_CONFIG.defaultCredits;
+    let referralBonus = 0;
+    let referrerExists = false;
+
+    // Check if referral code is valid
+    if (referredBy && referredBy.trim()) {
+      const referrerRef = db.collection('users').doc(referredBy.trim());
+      const referrerDoc = await referrerRef.get();
+      
+      if (referrerDoc.exists) {
+        referrerExists = true;
+        referralBonus = AUTH_CONFIG.referralBonusNew;
+        initialCredits += referralBonus;
+      }
+    }
 
     // Create user document
     await userRef.set({
@@ -224,21 +215,43 @@ async function handleRegister() {
       section: sec,
       email: email ? sanitizeInput(email) : '',
       passwordHash: passwordHash,
-      credits: AUTH_CONFIG.defaultCredits,
+      credits: initialCredits,
       title: AUTH_CONFIG.defaultTitle,
       totalVotesReceived: 0,
       votesRemaining: AUTH_CONFIG.defaultVotes,
+      referredBy: referrerExists ? referredBy.trim() : '',
+      totalReferrals: 0,
       registeredAt: firebase.firestore.FieldValue.serverTimestamp(),
       lastActive: firebase.firestore.FieldValue.serverTimestamp()
     });
 
-    // Set session
+    // If referred, reward the referrer
+    if (referrerExists) {
+      const referrerRef = db.collection('users').doc(referredBy.trim());
+      
+      await referrerRef.update({
+        credits: firebase.firestore.FieldValue.increment(AUTH_CONFIG.referralBonusReferrer),
+        totalReferrals: firebase.firestore.FieldValue.increment(1)
+      });
+
+      // Send notification to chat
+      await db.collection('messages').add({
+        user: 'SYSTEM',
+        text: `🎉 ${name} joined using ${referredBy.trim()}'s referral code! Both earned bonus credits!`,
+        type: 'MSG',
+        time: Date.now()
+      });
+    }
+
     setSession(name);
 
-    // Show welcome
-    showWelcome(name, 'Welcome to the Pyramid — your hierarchy awaits');
+    // Show welcome with referral info
+    const welcomeMessage = referrerExists 
+      ? `Welcome! You received ${referralBonus.toLocaleString()} bonus credits from referral!`
+      : 'Welcome to the Pyramid — your hierarchy awaits';
+    
+    showWelcome(name, welcomeMessage);
 
-    // Enter application
     await enterApplication();
 
     console.log('User registered successfully:', name);
@@ -253,21 +266,16 @@ async function handleRegister() {
 // LOGIN
 // ============================================
 
-/**
- * Handle user login
- */
 async function handleLogin() {
   try {
     const name = getInputValue('login-name');
     const password = getInputValue('login-pass');
 
-    // Validate input
     if (!name || !password) {
       showAuthError('Please enter your name and password.');
       return;
     }
 
-    // Get user document
     const userRef = db.collection('users').doc(name);
     const userDoc = await userRef.get();
 
@@ -276,7 +284,6 @@ async function handleLogin() {
       return;
     }
 
-    // Verify password
     const passwordHash = await hashPassword(password);
     const userData = userDoc.data();
 
@@ -285,19 +292,15 @@ async function handleLogin() {
       return;
     }
 
-    // Update last active
     await userRef.update({
       lastActive: firebase.firestore.FieldValue.serverTimestamp()
     });
 
-    // Set session
     setSession(name);
     AuthState.userCache = userData;
 
-    // Show welcome
     showWelcome(name, 'Welcome back — may your status rise');
 
-    // Enter application
     await enterApplication();
 
     console.log('User logged in successfully:', name);
@@ -312,15 +315,11 @@ async function handleLogin() {
 // LOGOUT
 // ============================================
 
-/**
- * Handle user logout
- */
 async function handleLogout() {
   const confirmed = confirm('Are you sure you want to logout?');
   if (!confirmed) return;
 
   try {
-    // Update last active before logout
     if (AuthState.currentUser) {
       await db.collection('users')
         .doc(AuthState.currentUser)
@@ -329,20 +328,16 @@ async function handleLogout() {
         });
     }
 
-    // Clear session
     clearSession();
 
-    // Cleanup
     if (typeof cleanupChat === 'function') {
       cleanupChat();
     }
 
-    // Reload page
     window.location.reload();
 
   } catch (error) {
     console.error('Logout error:', error);
-    // Force reload anyway
     window.location.reload();
   }
 }
@@ -351,19 +346,12 @@ async function handleLogout() {
 // SESSION MANAGEMENT
 // ============================================
 
-/**
- * Set user session
- * @param {string} username - Username to store
- */
 function setSession(username) {
   localStorage.setItem(AUTH_CONFIG.sessionKey, username);
   AuthState.currentUser = username;
   AuthState.isAuthenticated = true;
 }
 
-/**
- * Clear user session
- */
 function clearSession() {
   localStorage.removeItem(AUTH_CONFIG.sessionKey);
   AuthState.currentUser = null;
@@ -371,18 +359,10 @@ function clearSession() {
   AuthState.userCache = null;
 }
 
-/**
- * Get current user
- * @returns {string|null}
- */
 function getCurrentUser() {
   return AuthState.currentUser;
 }
 
-/**
- * Check if user is authenticated
- * @returns {boolean}
- */
 function isAuthenticated() {
   return AuthState.isAuthenticated;
 }
@@ -391,19 +371,14 @@ function isAuthenticated() {
 // APPLICATION ENTRY
 // ============================================
 
-/**
- * Enter main application
- */
 async function enterApplication() {
   try {
-    // Hide auth screen, show app screen
     const authScreen = document.getElementById('auth-screen');
     const appScreen = document.getElementById('app-screen');
 
     if (authScreen) authScreen.classList.add('hidden');
     if (appScreen) appScreen.classList.remove('hidden');
 
-    // Load user data
     const userRef = db.collection('users').doc(AuthState.currentUser);
     const userDoc = await userRef.get();
 
@@ -411,19 +386,19 @@ async function enterApplication() {
       const userData = userDoc.data();
       AuthState.userCache = userData;
 
-      // Update header
       updateUserHeader(userData);
 
-      // Show admin FAB if authorized
       if (typeof isAdmin === 'function' && isAdmin()) {
         const adminFab = document.getElementById('admin-fab');
         if (adminFab) {
           adminFab.classList.remove('hidden');
         }
       }
+      
+      // Show referral code to user
+      showReferralInfo(AuthState.currentUser, userData.totalReferrals || 0);
     }
 
-    // Initialize other systems
     if (typeof loadHierarchy === 'function') {
       loadHierarchy();
     }
@@ -440,10 +415,6 @@ async function enterApplication() {
   }
 }
 
-/**
- * Update user header information
- * @param {Object} userData - User data object
- */
 function updateUserHeader(userData) {
   const nameDisplay = document.getElementById('my-name-display');
   const creditsDisplay = document.getElementById('my-credits-display');
@@ -463,14 +434,55 @@ function updateUserHeader(userData) {
 }
 
 // ============================================
+// REFERRAL SYSTEM UI
+// ============================================
+
+function showReferralInfo(username, totalReferrals) {
+  // Create referral info card
+  setTimeout(() => {
+    const notification = document.createElement('div');
+    notification.className = 'fixed bottom-24 right-4 glass-card border-2 border-purple-500 text-white px-6 py-4 rounded-2xl shadow-2xl z-[9998] max-w-sm';
+    notification.innerHTML = `
+      <div class="text-center">
+        <div class="text-2xl mb-2">🎁 Referral Program</div>
+        <div class="text-sm mb-3">
+          <div class="font-bold text-lg text-purple-300 mb-1">Your Referral Code:</div>
+          <div class="bg-black/40 px-4 py-2 rounded-lg font-mono text-lg text-yellow-300 mb-2">${username}</div>
+          <div class="text-xs text-zinc-400 mb-2">Share your name as referral code!</div>
+        </div>
+        <div class="text-xs border-t border-zinc-700 pt-2 mt-2">
+          <div class="flex justify-between mb-1">
+            <span>New users get:</span>
+            <span class="text-green-400 font-bold">+25,000 CR</span>
+          </div>
+          <div class="flex justify-between mb-1">
+            <span>You get per referral:</span>
+            <span class="text-yellow-400 font-bold">+50,000 CR</span>
+          </div>
+          <div class="flex justify-between font-bold text-purple-300">
+            <span>Your referrals:</span>
+            <span>${totalReferrals}</span>
+          </div>
+        </div>
+        <button onclick="this.parentElement.parentElement.remove()" class="mt-3 text-xs text-zinc-500 hover:text-white transition-colors">Close</button>
+      </div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Auto-hide after 10 seconds
+    setTimeout(() => {
+      notification.style.transition = 'opacity 0.5s ease';
+      notification.style.opacity = '0';
+      setTimeout(() => notification.remove(), 500);
+    }, 10000);
+  }, 2000);
+}
+
+// ============================================
 // WELCOME OVERLAY
 // ============================================
 
-/**
- * Show welcome overlay
- * @param {string} name - Username
- * @param {string} subtitle - Subtitle message
- */
 function showWelcome(name, subtitle) {
   const overlay = document.getElementById('welcome-overlay');
   const title = document.getElementById('welcome-title');
@@ -486,20 +498,20 @@ function showWelcome(name, subtitle) {
 
   if (overlay) {
     overlay.classList.add('show');
+    overlay.style.opacity = '1';
+    overlay.style.pointerEvents = 'auto';
   }
 }
 
-/**
- * Close welcome overlay
- */
 function closeWelcome() {
   const overlay = document.getElementById('welcome-overlay');
   if (overlay) {
     overlay.classList.remove('show');
+    overlay.style.opacity = '0';
+    overlay.style.pointerEvents = 'none';
   }
 }
 
-// Setup welcome proceed button
 document.addEventListener('DOMContentLoaded', () => {
   const proceedBtn = document.getElementById('welcome-proceed');
   if (proceedBtn) {
@@ -511,32 +523,16 @@ document.addEventListener('DOMContentLoaded', () => {
 // VALIDATION UTILITIES
 // ============================================
 
-/**
- * Validate email format
- * @param {string} email - Email address
- * @returns {boolean}
- */
 function isValidEmail(email) {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return emailRegex.test(email);
 }
 
-/**
- * Validate name format
- * @param {string} name - Full name
- * @returns {boolean}
- */
 function isValidName(name) {
-  // Allow letters, spaces, hyphens, and apostrophes
   const nameRegex = /^[a-zA-Z\s'-]+$/;
   return nameRegex.test(name) && name.trim().length >= 2;
 }
 
-/**
- * Sanitize user input
- * @param {string} input - Raw input
- * @returns {string}
- */
 function sanitizeInput(input) {
   if (!input || typeof input !== 'string') return '';
   
@@ -545,11 +541,6 @@ function sanitizeInput(input) {
   return div.innerHTML.trim();
 }
 
-/**
- * Get input value safely
- * @param {string} id - Element ID
- * @returns {string}
- */
 function getInputValue(id) {
   const element = document.getElementById(id);
   return element ? element.value.trim() : '';
@@ -559,11 +550,6 @@ function getInputValue(id) {
 // PASSWORD HASHING
 // ============================================
 
-/**
- * Hash password using SHA-256
- * @param {string} password - Plain text password
- * @returns {Promise<string>}
- */
 async function hashPassword(password) {
   if (!password) return '';
 
@@ -583,18 +569,10 @@ async function hashPassword(password) {
 // USER FEEDBACK
 // ============================================
 
-/**
- * Show authentication error
- * @param {string} message - Error message
- */
 function showAuthError(message) {
   alert('⚠️ ' + message);
 }
 
-/**
- * Show authentication success
- * @param {string} message - Success message
- */
 function showAuthSuccess(message) {
   alert('✅ ' + message);
 }
@@ -603,14 +581,12 @@ function showAuthSuccess(message) {
 // INITIALIZATION
 // ============================================
 
-// Auto-initialize when DOM is ready
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initAuth);
 } else {
   initAuth();
 }
 
-// Export for external use
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     handleRegister,
@@ -622,7 +598,6 @@ if (typeof module !== 'undefined' && module.exports) {
   };
 }
 
-// Make functions globally accessible
 window.handleRegister = handleRegister;
 window.handleLogin = handleLogin;
 window.handleLogout = handleLogout;
