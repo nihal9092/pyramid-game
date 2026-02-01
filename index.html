@@ -473,7 +473,39 @@
 <script src="chat.js"></script>
 <script src="economy.js"></script>
 <script src="hierarchy-gift-buttons.js"></script>
-<script src="voting.js"></script>
+<script src="voting.js">
+  
+</script> <script>
+window.addEventListener('load', () => {
+    const authScreen = document.getElementById('auth-screen');
+    const appScreen = document.getElementById('app-screen');
 
+    auth.onAuthStateChanged(user => {
+        if (user) {
+            console.log("Sovereign Verified:", user.email);
+            
+            // Fix the Blank Screen
+            authScreen.style.display = 'none';
+            appScreen.style.display = 'block';
+            appScreen.classList.remove('hidden');
+            
+            // TRICK: Only run feature setups if they exist in your files
+            if (typeof initEconomy === 'function') initEconomy();
+            if (typeof setupVoting === 'function') setupVoting();
+            if (typeof loadChat === 'function') loadChat();
+            
+            // Admin Protection
+            db.collection('users').doc(user.uid).get().then(doc => {
+                if(doc.exists && doc.data().role === 'admin') {
+                    document.getElementById('admin-fab').style.display = 'flex';
+                }
+            });
+        } else {
+            authScreen.style.display = 'flex';
+            appScreen.style.display = 'none';
+        }
+    });
+});
+</script>
 </body>
 </html>
