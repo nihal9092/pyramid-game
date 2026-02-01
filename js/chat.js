@@ -1,9 +1,3 @@
-/**
- * chat.js - Enhanced Chat & Gift System
- * SIMPLIFIED AND BULLETPROOF VERSION
- * @version 3.1.0
- */
-
 'use strict';
 
 // ============================================
@@ -45,6 +39,29 @@ const CHAT_CONFIG = {
 };
 
 // ============================================
+// SOUND HANDLER FOR GIFTS
+// ============================================
+
+const sounds = {
+  common: new Audio("https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3"),
+  uncommon: new Audio("https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3"),
+  rare: new Audio("https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3"),
+  epic: new Audio("https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3"),
+  legendary: new Audio("https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3"),
+  mythic: new Audio("https://assets.mixkit.co/active_storage/sfx/2567/2567-preview.mp3"),
+  admin: new Audio("https://assets.mixkit.co/active_storage/sfx/951/951-preview.mp3")
+};
+
+function playSfx(tier) {
+  if (sounds[tier]) {
+    sounds[tier].currentTime = 0; // Reset playback if triggered rapidly
+    sounds[tier].play().catch(e =>
+      console.log("Audio play blocked by browser. User must interact first.", e)
+    );
+  }
+}
+
+// ============================================
 // STATE - SIMPLIFIED
 // ============================================
 
@@ -69,7 +86,6 @@ function initChat() {
     return;
   }
   
-  // Get current user - SIMPLE METHOD
   const storedUser = localStorage.getItem('pyramidUser');
   if (!storedUser) {
     console.error('❌ No user in localStorage');
@@ -79,7 +95,6 @@ function initChat() {
   ChatState.currentUser = storedUser;
   console.log('✅ Chat user set:', storedUser);
   
-  // Setup everything
   setupMessageListener();
   setupInputHandlers();
   setupTypingIndicator();
@@ -107,18 +122,17 @@ function setupMessageListener() {
     .onSnapshot(
       (snapshot) => {
         chatBox.innerHTML = '';
-        
         const messages = [];
         snapshot.forEach(doc => {
           messages.push({ id: doc.id, ...doc.data() });
         });
-        
         messages.reverse().forEach(msg => {
           const messageEl = createMessageElement(msg);
           chatBox.appendChild(messageEl);
         });
-        
-        chatBox.scrollTop = chatBox.scrollHeight;
+        if (chatBox.lastElementChild) {
+          chatBox.lastElementChild.scrollIntoView({ behavior: 'smooth' });
+        }
         console.log('📨 Messages updated:', messages.length);
       },
       (error) => {
@@ -340,7 +354,6 @@ async function sendMessage(text) {
   }
   
   try {
-    // Get user's title
     const userDoc = await db.collection('users').doc(ChatState.currentUser).get();
     const userTitle = userDoc.exists ? (userDoc.data().title || 'Commoner') : 'Commoner';
     
@@ -453,14 +466,12 @@ function openGiftModal(targetUser) {
 function createGiftModal(targetUser) {
   console.log('🎨 Building modal DOM...');
   
-  // Remove any existing modal
   const existing = document.getElementById('gift-modal-overlay');
   if (existing) {
     console.log('🗑️ Removing existing modal');
     existing.remove();
   }
   
-  // Create overlay
   const overlay = document.createElement('div');
   overlay.id = 'gift-modal-overlay';
   overlay.className = 'fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[10000] p-4';
@@ -472,12 +483,10 @@ function createGiftModal(targetUser) {
     }
   };
   
-  // Create modal
   const modal = document.createElement('div');
   modal.className = 'glass-card max-w-4xl w-full max-h-[90vh] overflow-y-auto p-6 rounded-3xl';
   modal.onclick = (e) => e.stopPropagation();
   
-  // Header
   const headerDiv = document.createElement('div');
   headerDiv.className = 'mb-6 flex justify-between items-center';
   
@@ -499,7 +508,6 @@ function createGiftModal(targetUser) {
   headerDiv.appendChild(closeBtn);
   modal.appendChild(headerDiv);
   
-  // Gift grid
   const grid = document.createElement('div');
   grid.className = 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4';
   
@@ -511,7 +519,6 @@ function createGiftModal(targetUser) {
   modal.appendChild(grid);
   overlay.appendChild(modal);
   
-  // Add to page
   document.body.appendChild(overlay);
   
   console.log('✅✅✅ MODAL ADDED TO PAGE ✅✅✅');
@@ -554,13 +561,13 @@ function createGiftCard(giftName, giftData, targetUser) {
   
   card.onclick = () => {
     console.log('🎁 Gift selected:', giftName);
-    confirmAndSendGift(ChatState.currentUser, targetUser, giftName, giftData.price);
+    confirmAndSendGift(ChatState.currentUser, targetUser, giftName, giftData.price, giftData.tier);
   };
   
   return card;
 }
 
-async function confirmAndSendGift(sender, recipient, giftName, price) {
+async function confirmAndSendGift(sender, recipient, giftName, price, tier) {
   const confirmed = confirm(
     `Send ${giftName} (${price.toLocaleString()} CR) to ${recipient}?\n\nThis cannot be undone.`
   );
@@ -575,7 +582,7 @@ async function confirmAndSendGift(sender, recipient, giftName, price) {
   console.log('💸 Processing gift transaction...');
   
   try {
-    await executeGiftTransaction(sender, recipient, giftName, price);
+    await executeGiftTransaction(sender, recipient, giftName, price, tier);
     console.log('✅ Gift sent successfully!');
     showSuccess(`Gift sent successfully!`);
   } catch (error) {
@@ -584,7 +591,7 @@ async function confirmAndSendGift(sender, recipient, giftName, price) {
   }
 }
 
-async function executeGiftTransaction(sender, recipient, giftName, price) {
+async function executeGiftTransaction(sender, recipient, giftName, price, tier) {
   const senderRef = db.collection('users').doc(sender);
   const recipientRef = db.collection('users').doc(recipient);
   
@@ -613,7 +620,6 @@ async function executeGiftTransaction(sender, recipient, giftName, price) {
     });
   });
   
-  // Record gift in chat
   await db.collection('messages').add({
     user: sender,
     target: recipient,
@@ -623,6 +629,7 @@ async function executeGiftTransaction(sender, recipient, giftName, price) {
   });
   
   console.log('✅ Gift transaction complete');
+  playSfx(tier);
 }
 
 function closeGiftModal() {
@@ -643,28 +650,4 @@ function showError(message) {
   notification.innerHTML = `
     <div class="flex items-center gap-3">
       <span class="text-2xl">❌</span>
-      <div class="text-sm">${sanitizeText(message)}</div>
-    </div>
-  `;
-  
-  document.body.appendChild(notification);
-  
-  setTimeout(() => {
-    notification.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
-    notification.style.opacity = '0';
-    notification.style.transform = 'translateX(400px)';
-    setTimeout(() => notification.remove(), 300);
-  }, 3000);
-}
-
-function showSuccess(message) {
-  const notification = document.createElement('div');
-  notification.className = 'fixed top-24 right-4 glass-card border-2 border-green-500 text-white px-6 py-4 rounded-2xl shadow-2xl z-[9999] max-w-sm';
-  notification.innerHTML = `
-    <div class="flex items-center gap-3">
-      <span class="text-2xl">✅</span>
-      <div class="text-sm">${sanitizeText(message)}</div>
-    </div>
-  `;
-  
-  document.body.appendChild(notification)
+      <div class="text-sm">${sanitizeText(message)}<
