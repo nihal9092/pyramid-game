@@ -514,6 +514,13 @@
                         autocomplete="email"
                     />
                     
+                    <input 
+                        id="auth-referral" 
+                        type="text" 
+                        placeholder="Referral Code (optional - get 25K bonus!)" 
+                        class="w-full bg-black/40 border border-purple-700 p-3 text-sm rounded-xl focus:border-purple-500 transition-all"
+                    />
+                    
                     <div class="relative">
                         <input 
                             id="auth-pass" 
@@ -576,130 +583,4 @@
                         </button>
                     </div>
                 </div>
-                
-                <div class="mt-8 pt-6 border-t border-zinc-800">
-                    <p class="text-[10px] text-zinc-500 text-center">
-                        By entering you agree to maintain dignity and respect within the hierarchy.
-                    </p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Welcome Overlay -->
-    <div id="welcome-overlay" class="fixed inset-0 flex items-center justify-center bg-black/80 backdrop-blur-md z-[9999] opacity-0 pointer-events-none transition-opacity duration-500">
-        <div class="glass-card max-w-lg p-10 rounded-3xl text-center">
-            <div class="text-6xl mb-6 animate-pulse">👑</div>
-            <h2 id="welcome-title" class="cinzel text-4xl gradient-text mb-3">Welcome</h2>
-            <p id="welcome-sub" class="text-sm text-zinc-400 mb-8">Initializing hierarchy...</p>
-            <button 
-                id="welcome-proceed"
-                class="btn-primary cinzel relative z-10"
-            >
-                Enter
-            </button>
-        </div>
-    </div>
-
-    <!-- Application Screen -->
-    <div id="app-screen" class="hidden max-w-6xl mx-auto px-4 py-8 fade-in">
-        <!-- Header -->
-        <header class="glass-card p-6 rounded-2xl mb-8 flex flex-wrap justify-between items-center gap-4">
-            <div class="flex items-center gap-4">
-                <div class="text-4xl">👤</div>
-                <div>
-                    <p class="text-[10px] text-zinc-500 tracking-widest uppercase mb-1">Identity</p>
-                    <h2 id="my-name-display" class="cinzel text-2xl text-white font-bold">---</h2>
-                    <div class="flex items-center gap-2 mt-1">
-                        <span id="my-title-display" class="title-badge title-common">Commoner</span>
-                        <span class="status-online"></span>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="text-right">
-                <p class="text-[10px] text-zinc-500 tracking-widest uppercase mb-1">Wealth</p>
-                <h2 id="my-credits-display" class="text-3xl font-mono font-bold gradient-text">0</h2>
-                <p class="text-[9px] text-zinc-600 uppercase tracking-wider">Credits</p>
-            </div>
-        </header>
-
-        <!-- Hierarchy Section -->
-        <div class="glass-card p-6 rounded-2xl mb-8">
-            <div class="flex justify-between items-center mb-6">
-                <h3 class="cinzel text-xl gradient-text font-bold tracking-wider">THE HIERARCHY</h3>
-                <div class="text-xs text-zinc-500">Live Rankings</div>
-            </div>
-            <div id="pyramid-list" class="space-y-3"></div>
-        </div>
-
-        <!-- Chat Section -->
-        <div class="chat-container">
-            <div class="p-4 border-b border-zinc-800/50 bg-gradient-to-r from-purple-900/20 to-pink-900/20 flex justify-between items-center">
-                <h3 class="cinzel text-sm tracking-[0.3em] gradient-text-purple">GRAND HALL</h3>
-                <div id="typing-indicator" class="text-[9px] text-zinc-500 italic hidden">typing...</div>
-            </div>
-            
-            <div id="chat-box" class="h-96 overflow-y-auto p-4 flex flex-col"></div>
-            
-            <div class="p-4 border-t border-zinc-800/50 bg-black/30 flex gap-2">
-                <input 
-                    id="chat-input" 
-                    type="text"
-                    placeholder="Send a message..." 
-                    class="flex-1 bg-zinc-900/60 border border-zinc-700 p-3 text-sm text-white rounded-xl focus:border-[#FFD700] transition-all"
-                    maxlength="500"
-                />
-                <button 
-                    id="send-chat"
-                    class="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 text-sm font-bold rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all"
-                >
-                    SEND
-                </button>
-            </div>
-        </div>
-
-        <!-- Logout -->
-        <button 
-            id="logout-btn"
-            class="mt-8 text-xs text-zinc-600 uppercase tracking-widest hover:text-red-500 transition-all font-medium"
-        >
-            ← Terminate Session
-        </button>
-    </div>
-
-    <!-- Admin FAB -->
-    <div id="admin-fab" class="admin-fab hidden" onclick="openAdminPower()">
-        <span class="cinzel text-black text-2xl font-black">⚡</span>
-    </div>
-
-    <!-- Firebase Configuration -->
-    <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyBs81OlYrQ1_HBUHJ3Tim1vT-2glHOZPbc",
-            authDomain: "pyramidgame2026.firebaseapp.com",
-            projectId: "pyramidgame2026",
-            storageBucket: "pyramidgame2026.firebasestorage.app",
-            messagingSenderId: "302574478188",
-            appId: "1:302574478188:web:aded8d66bdd1f828da8949"
-        };
-
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
-        console.log('🔥 Firebase initialized');
-    </script>
-
-    <!-- Application Scripts -->
-    <script src="js/auth.js"></script>
-    <script src="js/economy.js"></script>
-    <script src="js/voting.js"></script>
-    <script src="js/chat.js"></script>
-    <script src="js/bounty.js"></script>
-    <script src="js/admin.js"></script>
-
-    <script>
-        console.log('⚡ The Pyramid - Elite Social Hierarchy v3.0');
-        console.log('💎 All systems ready');
-    </script>
-</body>
-</html>
+             
