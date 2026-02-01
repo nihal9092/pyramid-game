@@ -8,6 +8,31 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
     <style>
+        /* Bounty Pulse Effect */
+.bounty-target {
+    border: 2px solid #ff4444 !important;
+    background: linear-gradient(45deg, #2a0000, #0a0a0a) !important;
+    animation: bountyPulse 1.5s infinite alternate;
+}
+
+@keyframes bountyPulse {
+    from { box-shadow: 0 0 5px #ff0000; }
+    to { box-shadow: 0 0 20px #ff0000; }
+}
+
+/* Luxury Aura Glows */
+.aura-gold { text-shadow: 0 0 10px #d4af37; color: #fff; font-weight: bold; }
+.aura-rainbow { 
+    background: linear-gradient(to right, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #8b00ff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: rainbowMove 3s linear infinite;
+}
+
+@keyframes rainbowMove {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 100% 50%; }
+}
         @keyframes slideDown { from { transform: translateY(-100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         .animate-slideDown { animation: slideDown 0.5s ease-out forwards; transition: all 0.5s ease-out; }
         @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Inter:wght@300;400;600&display=swap');
@@ -300,5 +325,6 @@
     <script src="js/auth.js"></script>
     <script src="js/voting.js"></script>
     <script src="js/economy.js"></script>
+    <script src="js/bounty.js"></script>
 </body>
 </html>
