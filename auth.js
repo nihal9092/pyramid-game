@@ -465,7 +465,24 @@ function updateUserHeader(userData) {
 // ============================================
 // WELCOME OVERLAY
 // ============================================
+auth.onAuthStateChanged(user => {
+    if (user) {
+        // Dispatch custom event to notify the UI and other scripts
+        const event = new CustomEvent('authSuccess', { detail: { user: user } });
+        window.dispatchEvent(event);
+        
+        // Update user status to Online
+        db.collection('users').doc(user.uid).update({
+            status: 'online',
+            lastActive: firebase.firestore.FieldValue.serverTimestamp()
+        }).catch(err => console.error("Status update failed", err));
 
+    } else {
+        document.getElementById('auth-screen').style.display = 'flex';
+        document.getElementById('app-screen').style.display = 'none';
+        document.getElementById('admin-fab').style.display = 'none';
+    }
+});
 /**
  * Show welcome overlay
  * @param {string} name - Username
